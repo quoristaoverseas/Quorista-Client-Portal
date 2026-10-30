@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#102b46">
+  <title>Client Portal | Quorista Overseas</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="page">
+    <header class="brand"><div class="brand-mark">Q</div><div><strong>QUORISTA OVERSEAS</strong><span>CLIENT PORTAL</span></div></header>
+    <section class="auth-card" id="auth-view">
+      <p class="eyebrow">WELCOME BACK</p>
+      <h1>Your journey, clearly managed.</h1>
+      <p class="muted">Sign in to view your profile, counsellor and application updates.</p>
+      <form id="login-form">
+        <label for="email">Email address</label>
+        <input id="email" type="email" autocomplete="username" required placeholder="you@example.com">
+        <label for="password">Password</label>
+        <input id="password" type="password" autocomplete="current-password" required placeholder="Your password">
+        <button type="submit" id="login-button">Sign in</button>
+        <p class="message" id="auth-message" role="status"></p>
+      </form>
+      <p class="small-note">Need an account? Client registration will be available once account provisioning is enabled.</p>
+    </section>
+    <section class="dashboard hidden" id="dashboard-view">
+      <div class="topline"><div><p class="eyebrow">CLIENT SPACE</p><h1 id="welcome-title">Welcome</h1></div><button class="button-secondary" id="signout-button">Sign out</button></div>
+      <div class="notice"><strong>Your portal is connected.</strong><p>Your account is authenticated. Your application information will appear here once your client profile and application records are configured.</p></div>
+      <div class="grid">
+        <article class="panel"><span class="panel-label">MY PROFILE</span><h2>Personal details</h2><p id="profile-email" class="muted"></p></article>
+        <article class="panel"><span class="panel-label">MY COUNSELLOR</span><h2>Assigned counsellor</h2><p class="muted">Your assigned counsellor details will appear here.</p></article>
+        <article class="panel"><span class="panel-label">MY APPLICATIONS</span><h2>Application progress</h2><p class="muted">Your application updates will appear here.</p></article>
+      </div>
+    </section>
+    <footer>© <span id="year"></span> Quorista Overseas · Secure client access</footer>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
