@@ -91,6 +91,7 @@ function populateProfile(user, profile) {
 }
 
 function showDashboard(user, profile) {
+  document.body.classList.add("dashboard-active");
   populateProfile(user, profile);
   $("auth-view").classList.add("hidden");
   $("dashboard-view").classList.remove("hidden");
@@ -212,6 +213,7 @@ $("google-button").addEventListener("click", async () => {
 onAuthStateChanged(auth, async (user) => {
   if (authActionInProgress) return;
   if (!user) {
+    document.body.classList.remove("dashboard-active");
     $("auth-view").classList.remove("hidden");
     $("dashboard-view").classList.add("hidden");
     $("auth-footer").classList.remove("hidden");
