@@ -15,12 +15,15 @@ googleProvider.setCustomParameters({ prompt: "select_account" });
 const $ = (id) => document.getElementById(id);
 let mode = "login";
 let authActionInProgress = false;
+
 $("year").textContent = new Date().getFullYear();
+$("year-auth").textContent = new Date().getFullYear();
 
 function setMessage(message, isError = true) {
   $("auth-message").textContent = message;
   $("auth-message").style.color = isError ? "#b3321f" : "#16815e";
 }
+
 function setMode(nextMode) {
   mode = nextMode;
   const signup = mode === "signup";
@@ -37,13 +40,63 @@ function setMode(nextMode) {
   $("password").autocomplete = signup ? "new-password" : "current-password";
   setMessage("");
 }
+
+function showPage(page) {
+  const validPages = ["overview", "profile", "applications", "counsellor"];
+  const selected = validPages.includes(page) ? page : "overview";
+  validPages.forEach((name) => {
+    $("page-" + name).classList.toggle("hidden", name !== selected);
+  });
+  document.querySelectorAll(".dashboard-nav-item").forEach((button) => {
+    button.classList.toggle("active", button.dataset.page === selected);
+  });
+  const titles = {
+    overview: ["Overview", "A clear view of your journey with us."],
+    profile: ["My Profile", "Your registered account information."],
+    applications: ["My Applications", "Your study and travel applications in one place."],
+    counsellor: ["My Counsellor", "Your personal guidance and support."]
+  };
+  $("page-title").textContent = titles[selected][0];
+  $("page-subtitle").textContent = titles[selected][1];
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function formatDate(value) {
+  if (!value) return "Not available";
+  const date = typeof value.toDate === "function" ? value.toDate() : new Date(value);
+  if (Number.isNaN(date.getTime())) return "Not available";
+  return new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "long", year: "numeric" }).format(date);
+}
+
+function providerLabel(providers = []) {
+  const labels = providers.map((provider) => {
+    if (provider === "google.com") return "Google";
+    if (provider === "password") return "Email and password";
+    return provider;
+  });
+  return labels.length ? [...new Set(labels)].join(", ") : "Not available";
+}
+
+function populateProfile(user, profile) {
+  const name = profile.fullName || user.displayName || "Client";
+  const email = profile.email || user.email || "Email not available";
+  $("welcome-title").textContent = "Welcome, " + name;
+  $("profile-name").textContent = name;
+  $("profile-email").textContent = email;
+  $("profile-avatar").textContent = name.trim().charAt(0).toUpperCase() || "Q";
+  $("detail-name").textContent = name;
+  $("detail-email").textContent = email;
+  $("detail-provider").textContent = providerLabel(profile.authProvider || user.providerData.map((item) => item.providerId));
+  $("detail-created").textContent = formatDate(profile.createdAt);
+}
+
 function showDashboard(user, profile) {
-  $("welcome-title").textContent = "Welcome, " + (profile.fullName || user.displayName || "Client");
-  $("profile-email").textContent = profile.email || user.email || "";
+  populateProfile(user, profile);
   $("auth-view").classList.add("hidden");
   $("dashboard-view").classList.remove("hidden");
+  $("auth-footer").classList.add("hidden");
+  showPage("overview");
 }
-$("mode-toggle").addEventListener("click", () => setMode(mode === "login" ? "signup" : "login"));
 
 async function ensureClientProfile(user, fullName = "") {
   const userRef = doc(db, "users", user.uid);
@@ -66,8 +119,10 @@ async function ensureClientProfile(user, fullName = "") {
     authProvider: user.providerData.map((provider) => provider.providerId)
   };
   await setDoc(userRef, profile);
-  return profile;
+  const saved = await getDoc(userRef);
+  return saved.exists() ? saved.data() : profile;
 }
+
 async function loadExistingClient(user) {
   const profileSnap = await getDoc(doc(db, "users", user.uid));
   if (!profileSnap.exists() || profileSnap.data().role !== "client" || profileSnap.data().accountStatus !== "active") {
@@ -76,6 +131,17 @@ async function loadExistingClient(user) {
   }
   showDashboard(user, profileSnap.data());
 }
+
+$("mode-toggle").addEventListener("click", () => setMode(mode === "login" ? "signup" : "login"));
+
+document.querySelectorAll(".dashboard-nav-item").forEach((button) => {
+  button.addEventListener("click", () => showPage(button.dataset.page));
+});
+document.querySelectorAll("[data-go]").forEach((button) => {
+  button.addEventListener("click", () => showPage(button.dataset.go));
+});
+$("signout-button").addEventListener("click", () => signOut(auth));
+$("mobile-signout").addEventListener("click", () => signOut(auth));
 
 $("auth-form").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -143,13 +209,12 @@ $("google-button").addEventListener("click", async () => {
   }
 });
 
-$("signout-button").addEventListener("click", () => signOut(auth));
-
 onAuthStateChanged(auth, async (user) => {
   if (authActionInProgress) return;
   if (!user) {
     $("auth-view").classList.remove("hidden");
     $("dashboard-view").classList.add("hidden");
+    $("auth-footer").classList.remove("hidden");
     return;
   }
   try {
