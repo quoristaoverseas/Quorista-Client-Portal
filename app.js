@@ -37,6 +37,12 @@ function setMode(nextMode) {
   $("password").autocomplete = signup ? "new-password" : "current-password";
   setMessage("");
 }
+function showDashboard(user, profile) {
+  $("welcome-title").textContent = "Welcome, " + (profile.fullName || user.displayName || "Client");
+  $("profile-email").textContent = profile.email || user.email || "";
+  $("auth-view").classList.add("hidden");
+  $("dashboard-view").classList.remove("hidden");
+}
 $("mode-toggle").addEventListener("click", () => setMode(mode === "login" ? "signup" : "login"));
 
 async function ensureClientProfile(user, fullName = "") {
@@ -62,6 +68,14 @@ async function ensureClientProfile(user, fullName = "") {
   await setDoc(userRef, profile);
   return profile;
 }
+async function loadExistingClient(user) {
+  const profileSnap = await getDoc(doc(db, "users", user.uid));
+  if (!profileSnap.exists() || profileSnap.data().role !== "client" || profileSnap.data().accountStatus !== "active") {
+    await signOut(auth);
+    throw new Error("This account is not authorized for Client Portal access. Please use the correct portal.");
+  }
+  showDashboard(user, profileSnap.data());
+}
 
 $("auth-form").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -77,9 +91,11 @@ $("auth-form").addEventListener("submit", async (event) => {
       if (!fullName) throw new Error("Please enter your full name.");
       const credential = await createUserWithEmailAndPassword(auth, $("email").value.trim(), $("password").value);
       await updateProfile(credential.user, { displayName: fullName });
-      await ensureClientProfile(credential.user, fullName);
+      const profile = await ensureClientProfile(credential.user, fullName);
+      showDashboard(credential.user, profile);
     } else {
-      await signInWithEmailAndPassword(auth, $("email").value.trim(), $("password").value);
+      const credential = await signInWithEmailAndPassword(auth, $("email").value.trim(), $("password").value);
+      await loadExistingClient(credential.user);
     }
   } catch (error) {
     const messages = {
@@ -91,6 +107,7 @@ $("auth-form").addEventListener("submit", async (event) => {
       "auth/popup-blocked": "Your browser blocked the Google sign-in window. Please allow pop-ups and try again.",
       "auth/account-exists-with-different-credential": "An account already exists with this email using another sign-in method. Sign in with that method first."
     };
+    if (auth.currentUser && error.code !== "auth/invalid-credential") await signOut(auth).catch(() => {});
     setMessage(messages[error.code] || error.message || "Unable to complete sign-in. Please try again.");
     console.error(error);
   } finally {
@@ -108,13 +125,15 @@ $("google-button").addEventListener("click", async () => {
   setMessage("");
   try {
     const credential = await signInWithPopup(auth, googleProvider);
-    await ensureClientProfile(credential.user);
+    const profile = await ensureClientProfile(credential.user);
+    showDashboard(credential.user, profile);
   } catch (error) {
     const messages = {
       "auth/popup-closed-by-user": "Google sign-in was closed before completion.",
       "auth/popup-blocked": "Your browser blocked the Google sign-in window. Please allow pop-ups and try again.",
       "auth/account-exists-with-different-credential": "An account already exists with this email using another sign-in method. Please sign in with that method first."
     };
+    if (auth.currentUser && error.code !== "auth/account-exists-with-different-credential") await signOut(auth).catch(() => {});
     setMessage(messages[error.code] || error.message || "Google sign-in could not be completed.");
     console.error(error);
   } finally {
@@ -127,25 +146,16 @@ $("google-button").addEventListener("click", async () => {
 $("signout-button").addEventListener("click", () => signOut(auth));
 
 onAuthStateChanged(auth, async (user) => {
+  if (authActionInProgress) return;
   if (!user) {
     $("auth-view").classList.remove("hidden");
     $("dashboard-view").classList.add("hidden");
     return;
   }
   try {
-    const profileSnap = await getDoc(doc(db, "users", user.uid));
-    if (!profileSnap.exists() || profileSnap.data().role !== "client" || profileSnap.data().accountStatus !== "active") {
-      await signOut(auth);
-      setMessage("This account is not authorized for Client Portal access. Please use the correct portal.");
-      return;
-    }
-    const profile = profileSnap.data();
-    $("welcome-title").textContent = "Welcome, " + (profile.fullName || user.displayName || "Client");
-    $("profile-email").textContent = profile.email || user.email || "";
-    $("auth-view").classList.add("hidden");
-    $("dashboard-view").classList.remove("hidden");
+    await loadExistingClient(user);
   } catch (error) {
-    setMessage("Unable to load your profile. Please try again later.");
+    setMessage(error.message || "Unable to load your profile. Please try again later.");
     console.error(error);
   }
 });
