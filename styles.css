@@ -82,3 +82,45 @@ body.dashboard-active .hero{align-items:flex-start;min-height:100vh;padding:112p
 /* Dedicated My Counsellor profile cards */
 .counsellor-intro{margin:4px 0 18px}.counsellor-intro h3{font:800 1.35rem Manrope;color:var(--ink);margin:6px 0}.counsellor-intro p{color:#817d98;font-size:.8rem;margin:0}.counsellor-card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:15px}.counsellor-profile-card{padding:22px;border:1px solid #e9e5f2;border-radius:16px;background:#fff;box-shadow:0 12px 30px -28px rgba(31,16,104,.35)}.counsellor-profile-top{display:flex;align-items:center;gap:13px;padding-bottom:17px;border-bottom:1px solid #f0edf6}.counsellor-avatar{display:grid;place-items:center;width:48px;height:48px;flex:0 0 48px;border-radius:15px;background:linear-gradient(135deg,#e9e4ff,#f3efff);color:#5b3df5;font:800 1.25rem Manrope}.counsellor-profile-top h4{font:800 1rem Manrope;color:var(--ink);margin:4px 0 2px}.counsellor-profile-top p{font-size:.74rem;color:#817d98;margin:0}.counsellor-detail-row{display:flex;flex-direction:column;gap:5px;padding:13px 0;border-bottom:1px solid #f0edf6}.counsellor-detail-row>span,.counsellor-assigned-cases>span{font:800 .56rem Manrope;letter-spacing:.13em;color:#9a95ad}.counsellor-detail-row strong,.counsellor-email{font-size:.78rem;font-weight:700;color:#302b52;overflow-wrap:anywhere}.counsellor-email{color:var(--violet);text-decoration:underline;text-underline-offset:3px}.counsellor-unavailable{font-size:.75rem;color:#89859e}.counsellor-assigned-cases{padding-top:13px}.counsellor-assigned-cases p{font-size:.76rem;line-height:1.6;color:#514b6d;margin:6px 0 0}
 @media(max-width:600px){.counsellor-profile-card{padding:19px}}
+
+
+/* ==========================================================
+   Quorista Overseas brand alignment — Client Portal
+   Shared brand tokens from quoristaoverseas.in
+   ========================================================== */
+:root{
+ --ink:#070427;--indigo:#10065c;--indigo-2:#1d0f8a;
+ --violet:#5b3df5;--lilac:#c9bfff;--saffron:#ffb020;
+ --coral:#ff6b57;--cream:#fbf7ef;--mist:#f0ecfc;
+ --text:#1b1740;--muted:#5d5a7e;--line:rgba(16,6,92,.12);
+ --brand-gradient:linear-gradient(135deg,#5b3df5 0%,#ff6b57 60%,#ffb020 100%);
+}
+.site-header{
+ background:linear-gradient(105deg,rgba(7,4,39,.97),rgba(16,6,92,.96));
+ border-bottom:1px solid rgba(255,255,255,.13);
+ box-shadow:0 8px 28px rgba(7,4,39,.16);
+}
+.site-header nav a:not(.nav-cta){transition:color .2s ease}
+.site-header nav a:not(.nav-cta):hover{color:#ffb020}
+.nav-cta{background:#ffb020;color:#070427!important;border-color:#ffb020;box-shadow:0 8px 22px rgba(255,176,32,.18)}
+.nav-cta:hover{background:#fff;color:#10065c!important}
+.auth-card,.content-panel,.overview-card,.application-form-panel,.application-drafts{
+ box-shadow:0 16px 42px rgba(16,6,92,.07);
+}
+.auth-card{border-color:rgba(16,6,92,.1)}
+.auth-card form button,.application-success-card button,.application-primary{
+ background:var(--brand-gradient);color:#fff;
+ box-shadow:0 12px 26px rgba(91,61,245,.18);
+}
+.dashboard{border-color:rgba(201,191,255,.42);box-shadow:0 28px 80px rgba(7,4,39,.32)}
+.dashboard-sidebar{background:linear-gradient(180deg,#fff 0%,#fbfaff 100%)}
+.dashboard-nav-item.active{background:#f0ecfc;color:#10065c;box-shadow:inset 3px 0 0 #ffb020}
+.dashboard-nav-item:hover{background:#f7f3ff;color:#5b3df5}
+.welcome-banner{background:radial-gradient(circle at 88% 18%,rgba(91,61,245,.38),transparent 30%),linear-gradient(115deg,#070427 0%,#10065c 70%,#241078 100%)}
+.welcome-kicker,.section-kicker{color:#5b3df5}
+.dashboard-footer{border-top:1px solid rgba(16,6,92,.1);color:#77738f}
+.dashboard-footer i,.auth-footer i{color:#ffb020}
+button,a,.overview-card,.application-step,.counsellor-profile-card{transition:color .2s ease,background-color .2s ease,border-color .2s ease,box-shadow .2s ease,transform .2s ease}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid rgba(255,176,32,.55);outline-offset:2px}
+@media(hover:hover){.overview-card:hover,.counsellor-profile-card:hover{transform:translateY(-3px);box-shadow:0 20px 42px rgba(16,6,92,.1)}}
+@media(max-width:600px){.site-header{background:rgba(7,4,39,.98)}.dashboard{border-radius:16px}.dashboard-main{padding:18px 15px}}
