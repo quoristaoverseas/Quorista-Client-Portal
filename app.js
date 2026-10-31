@@ -330,6 +330,14 @@ async function loadClientApplications() {
       list.innerHTML = '<p class="muted">No saved applications yet. Your first application can be started above.</p>';
       return;
     }
+    const updateSnapshot = await getDocs(query(collection(db, "status_updates"), where("clientUid", "==", applicationUser.uid)));
+    const updatesByApplication = new Map();
+    updateSnapshot.docs.forEach(updateDoc => {
+      const update = updateDoc.data();
+      const bucket = updatesByApplication.get(update.applicationId) || [];
+      bucket.push(update);
+      updatesByApplication.set(update.applicationId, bucket);
+    });
     list.innerHTML = snapshot.docs.map(item => {
       const data = item.data();
       const status = data.status === "submitted" ? "Submitted" : "Draft";
@@ -337,9 +345,15 @@ async function loadClientApplications() {
       const progressLabel = progress.charAt(0).toUpperCase() + progress.slice(1);
       const counsellor = data.assignedCounsellorName || "";
       const update = data.progressUpdate || "";
+      const history = (updatesByApplication.get(item.id) || []).sort((a,b) => {
+        const av = a.createdAt?.toMillis ? a.createdAt.toMillis() : new Date(a.createdAt || 0).getTime();
+        const bv = b.createdAt?.toMillis ? b.createdAt.toMillis() : new Date(b.createdAt || 0).getTime();
+        return bv - av;
+      });
+      const historyMarkup = history.length ? '<div class="client-progress-history"><strong>Progress history</strong>' + history.map(entry => '<div class="client-progress-entry"><span>' + escapeApplicationHtml(formatDate(entry.createdAt)) + '</span><p>' + escapeApplicationHtml(entry.clientMessage || "Your application status has been updated.") + '</p></div>').join("") + '</div>' : '';
       return '<article class="application-list-item"><div><strong>' + escapeApplicationHtml(data.applicantFullName || "Study Abroad application") + '</strong><span>' + escapeApplicationHtml(status) + ' · Study Abroad</span></div>' +
         (data.status === "draft" ? '<button type="button" data-resume-app="' + item.id + '">Continue draft →</button>' : '<div class="application-submitted-label">Application: ' + escapeApplicationHtml(progressLabel) + '</div>') +
-        (data.status === "submitted" ? '<div class="client-case-details"><p><strong>Assigned counsellor:</strong> ' + escapeApplicationHtml(counsellor || "Not assigned yet") + '</p><p><strong>Latest update:</strong> ' + escapeApplicationHtml(update || "Your application has been received. Updates will appear here as your case progresses.") + '</p></div>' : '') + '</article>';
+        (data.status === "submitted" ? '<div class="client-case-details"><p><strong>Assigned counsellor:</strong> ' + escapeApplicationHtml(counsellor || "Not assigned yet") + '</p><p><strong>Latest update:</strong> ' + escapeApplicationHtml(update || "Your application has been received. Updates will appear here as your case progresses.") + '</p>' + historyMarkup + '</div>' : '') + '</article>';
     }).join("");
     list.querySelectorAll("[data-resume-app]").forEach(button => button.addEventListener("click", async () => {
       const id = button.dataset.resumeApp;
