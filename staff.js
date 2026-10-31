@@ -9,6 +9,15 @@ $("year").textContent=new Date().getFullYear();
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function message(id,text,ok=false){$(id).textContent=text;$(id).style.color=ok?"#23835f":"#a33228";}
 function servicesLabel(a=[]){return a.map(x=>x==="study_abroad"?"Study Abroad":"International Tourism").join(" · ")||"No service permission";}
+function showWorkspaceView(view){
+ const allowed=["overview","cases","team"];
+ const selected=allowed.includes(view)?view:"overview";
+ document.querySelectorAll(".workspace-view").forEach(section=>section.classList.toggle("hidden",section.id!=="view-"+selected));
+ document.querySelectorAll(".workspace-nav").forEach(button=>button.classList.toggle("active",button.dataset.view===selected));
+}
+document.querySelectorAll("[data-view]").forEach(button=>button.addEventListener("click",()=>showWorkspaceView(button.dataset.view)));
+document.querySelectorAll("[data-go]").forEach(button=>button.addEventListener("click",()=>showWorkspaceView(button.dataset.go)));
+
 async function enterWorkspace(user){
  currentUser=user;isAdmin=user.uid===ADMIN_UID;
  const snap=await getDoc(doc(db,"staff",user.uid));
@@ -21,7 +30,9 @@ async function enterWorkspace(user){
  $("login-panel").classList.add("hidden");$("workspace").classList.remove("hidden");
  $("welcome").textContent="Welcome, "+(staffProfile?.fullName||user.displayName||"Administrator");
  $("roleline").textContent=isAdmin?"Super Admin · Counsellor access":"Counsellor · "+servicesLabel(staffProfile.services||[]);
- $("admin-panel").classList.toggle("hidden",!isAdmin);
+ document.querySelectorAll(".admin-only").forEach(button=>button.classList.toggle("hidden",!isAdmin));
+ $("view-team").classList.toggle("hidden",!isAdmin);
+ showWorkspaceView("overview");
  $("owner-profile-panel").classList.toggle("hidden",!isAdmin||!!staffProfile);
  await loadStaff();await loadCases();
 }
@@ -103,6 +114,11 @@ async function loadCases(){
    docs=batches.flatMap(batch=>batch.docs);
   }
   const records=docs.map(d=>({id:d.id,...d.data()})).filter(a=>a.status==="submitted");
+  const metricTotal=$("metric-total"),metricPending=$("metric-pending"),metricStudy=$("metric-study"),metricTourism=$("metric-tourism");
+  if(metricTotal)metricTotal.textContent=records.length;
+  if(metricPending)metricPending.textContent=records.filter(a=>!["completed","closed","withdrawn"].includes(a.progressStatus||"submitted")).length;
+  if(metricStudy)metricStudy.textContent=records.filter(a=>a.applicationType==="study_abroad").length;
+  if(metricTourism)metricTourism.textContent=records.filter(a=>a.applicationType==="tourism").length;
   const staffSnap=isAdmin?await getDocs(collection(db,"staff")):null;
   const staff=staffSnap?staffSnap.docs.map(d=>({uid:d.id,...d.data()})).filter(s=>s.active):[];
   const search=$("case-search"),statusFilter=$("case-status-filter"),serviceFilter=$("case-service-filter"),assignmentFilter=$("case-assignment-filter"),sortFilter=$("case-sort");
