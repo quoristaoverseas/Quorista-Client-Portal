@@ -94,5 +94,33 @@ async function loadCases(){
 $("login-form").addEventListener("submit",async e=>{e.preventDefault();$("login-button").disabled=true;message("login-message","");try{const c=await signInWithEmailAndPassword(auth,$("email").value.trim(),$("password").value);await enterWorkspace(c.user);}catch(err){message("login-message",err.message||"Sign-in failed.");if(auth.currentUser)await signOut(auth).catch(()=>{});}finally{$("login-button").disabled=false;}});
 $("staff-form").addEventListener("submit",async e=>{e.preventDefault();const services=[...document.querySelectorAll('input[name="service"]:checked')].map(x=>x.value);if(!services.length){message("staff-message","Select at least one permitted service.");return;}const uid=$("staff-uid").value.trim();if(!uid||uid===ADMIN_UID){message("staff-message","Enter the counsellor's own Firebase Authentication UID. Your administrator account is already reserved.");return;}try{const existing=await getDoc(doc(db,"staff",uid));if(existing.exists()){message("staff-message","A profile already exists for this UID. Edit it in the Authorised staff list instead; existing access was not changed.");return;}await setDoc(doc(db,"staff",uid),{fullName:$("staff-name").value.trim(),email:$("staff-email").value.trim(),designation:$("staff-title").value.trim(),role:"counsellor",services,active:true,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});message("staff-message","Counsellor profile created successfully.",true);e.target.reset();$("staff-title").value="Study Abroad Counsellor";await loadStaff();}catch(err){message("staff-message","Could not save: "+err.message);}});
 $("activate-owner").addEventListener("click",async()=>{try{await setDoc(doc(db,"staff",currentUser.uid),{fullName:"Adarsh Srivastava",email:currentUser.email||"",designation:"Co-Founder & Immigration Consultant",role:"super_admin",services:["study_abroad"],active:true,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});await enterWorkspace(currentUser);}catch(e){message("owner-message",e.message);}});
-$("refresh").addEventListener("click",loadCases);$("signout").addEventListener("click",()=>signOut(auth));
-onAuthStateChanged(auth,async user=>{if(!user)return;try{await enterWorkspace(user);}catch(e){message("login-message",e.message);}});
+$("refresh").addEventListener("click",loadCases);
+$("signout").addEventListener("click",async()=>{
+ const button=$("signout");
+ button.disabled=true;
+ button.textContent="Signing out…";
+ try{
+  await signOut(auth);
+  $("workspace").classList.add("hidden");
+  $("login-panel").classList.remove("hidden");
+  $("login-form").reset();
+  message("login-message","You have been signed out successfully.",true);
+ }catch(e){
+  console.error("Sign-out failed:",e);
+  button.disabled=false;
+  button.textContent="Sign out";
+  alert("Could not sign out. Please try again: "+(e.message||"Unknown error"));
+ }
+});
+onAuthStateChanged(auth,async user=>{
+ if(!user){
+  currentUser=null;staffProfile=null;isAdmin=false;
+  $("workspace").classList.add("hidden");
+  $("login-panel").classList.remove("hidden");
+  $("signout").disabled=false;
+  $("signout").textContent="Sign out";
+  return;
+ }
+ try{await enterWorkspace(user);}
+ catch(e){message("login-message",e.message);}
+});
