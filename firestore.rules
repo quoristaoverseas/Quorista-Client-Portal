@@ -6,7 +6,7 @@ service cloud.firestore {
   function staffExists(){return signedIn() && exists(/databases/$(database)/documents/staff/$(request.auth.uid));}
   function staffData(){return get(/databases/$(database)/documents/staff/$(request.auth.uid)).data;}
   function isActiveCounsellor(){return staffExists() && staffData().active == true && staffData().role in ["counsellor","super_admin"];}
-  function serviceAllowed(service){return isSuperAdmin() || (isActiveCounsellor() && service in staffData().services);}
+  function serviceAllowed(serviceName){return isSuperAdmin() || (isActiveCounsellor() && serviceName in staffData().services);}
   function assignedToMe(data){return isActiveCounsellor() && data.assignedCounsellorUid == request.auth.uid && serviceAllowed(data.applicationType);}
   match /users/{userId}{
    allow read: if isSuperAdmin() || (signedIn() && request.auth.uid==userId);
