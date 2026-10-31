@@ -156,3 +156,11 @@ footer{color:#9994aa}
 .followup-item small{color:#9993aa;font-size:.66rem}
 .followup-item button{white-space:nowrap}
 @media(max-width:620px){.followup-item{align-items:flex-start;flex-direction:column}}
+
+/* Private internal case notes */
+.private-notes{margin:12px 0;padding:11px 13px;border:1px solid #e9e4f1;border-radius:10px;background:#fbfaff}
+.private-notes summary{cursor:pointer;color:#55448c;font-size:.72rem;font-weight:800}
+.private-note-entry{padding:9px 0;border-top:1px solid #eeeaf5}
+.private-note-entry p{margin:0 0 5px;color:#514b68;font-size:.75rem;line-height:1.55;white-space:pre-wrap}
+.private-note-entry small,.private-notes-empty{color:#8b849c;font-size:.66rem}
+.private-notes-empty{margin:10px 0}
