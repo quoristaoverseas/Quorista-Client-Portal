@@ -181,10 +181,10 @@ async function loadCases(){
    const batches=await Promise.all(permitted.map(service=>getDocs(query(collection(db,"applications"),where("assignedCounsellorUid","==",currentUser.uid),where("applicationType","==",service)))));
    docs=batches.flatMap(batch=>batch.docs);
   }
-  const records=docs.map(d=>({id:d.id,...d.data()})).filter(a=>a.status==="submitted");
+  const records=docs.map(d=>({id:d.id,...d.data()})).filter(a=>["study_abroad","tourism"].includes(a.applicationType));
   const metricTotal=$("metric-total"),metricPending=$("metric-pending"),metricStudy=$("metric-study"),metricTourism=$("metric-tourism");
   if(metricTotal)metricTotal.textContent=records.length;
-  if(metricPending)metricPending.textContent=records.filter(a=>!["completed","closed","withdrawn"].includes(a.progressStatus||"submitted")).length;
+  if(metricPending)metricPending.textContent=records.filter(a=>!["completed","closed","withdrawn"].includes(a.progressStatus||"registered")).length;
   if(metricStudy)metricStudy.textContent=records.filter(a=>a.applicationType==="study_abroad").length;
   if(metricTourism)metricTourism.textContent=records.filter(a=>a.applicationType==="tourism").length;
   const staffSnap=isAdmin?await getDocs(collection(db,"staff")):null;
@@ -204,7 +204,7 @@ async function loadCases(){
    const term=(search?.value||"").trim().toLowerCase();
    const status=statusFilter?.value||"all",service=serviceFilter?.value||"all",assignment=assignmentFilter?.value||"all",sort=sortFilter?.value||"newest";
    let shown=records.filter(a=>{
-    if(status!=="all"&&(a.progressStatus||"submitted")!==status)return false;
+    if(status!=="all"&&(a.progressStatus||"registered")!==status)return false;
     if(service!=="all"&&a.applicationType!==service)return false;
     if(assignment==="assigned"&&!a.assignedCounsellorUid)return false;
     if(assignment==="unassigned"&&a.assignedCounsellorUid)return false;
@@ -216,22 +216,22 @@ async function loadCases(){
    });
    shown.sort((a,b)=>{
     if(sort==="name")return String(a.applicantFullName||"").localeCompare(String(b.applicantFullName||""));
-    if(sort==="status")return String(a.progressStatus||"submitted").localeCompare(String(b.progressStatus||"submitted"));
+    if(sort==="status")return String(a.progressStatus||"registered").localeCompare(String(b.progressStatus||"submitted"));
     const av=a.createdAt?.toMillis?a.createdAt.toMillis():new Date(a.createdAt||0).getTime();
     const bv=b.createdAt?.toMillis?b.createdAt.toMillis():new Date(b.createdAt||0).getTime();
     return sort==="oldest"?av-bv:bv-av;
    });
-   $("case-count").textContent="Showing "+shown.length+" of "+records.length+" submitted application"+(records.length===1?"":"s");
-   if(!shown.length){root.innerHTML='<div class="empty">'+(records.length?"No applications match these search and filter settings.":"No submitted applications are currently assigned to this account.")+'</div>';return;}
+   $("case-count").textContent="Showing "+shown.length+" of "+records.length+" registered case"+(records.length===1?"":"s");
+   if(!shown.length){root.innerHTML='<div class="empty">'+(records.length?"No applications match these search and filter settings.":"No registered cases are currently assigned to this account.")+'</div>';return;}
    root.innerHTML=shown.map(a=>{
     const choices=staff.filter(s=>(s.services||[]).includes(a.applicationType)).map(s=>'<option value="'+esc(s.uid)+'" '+(a.assignedCounsellorUid===s.uid?'selected':'')+'>'+esc(s.fullName)+' · '+esc(servicesLabel(s.services))+'</option>').join("");
     const assignment=isAdmin?'<label>Assign counsellor<select data-assign="'+esc(a.id)+'"><option value="">Unassigned</option>'+choices+'</select></label>':'';
-    const studyStatuses=["submitted","under_review","counselling_scheduled","profile_assessment","university_shortlisting","university_application","offer_received","deposit_pending","visa_documentation","visa_submitted","visa_decision","pre_departure","awaiting_client","completed","on_hold"];
-    const tourismStatuses=["submitted","under_review","consultation_scheduled","itinerary_planning","documents_pending","visa_documentation","visa_submitted","visa_decision","travel_ready","awaiting_client","completed","on_hold"];
-    const statusOptions=(a.applicationType==="tourism"?tourismStatuses:studyStatuses).map(v=>'<option value="'+v+'" '+((a.progressStatus||"submitted")===v?"selected":"")+'>'+v.replaceAll("_"," ")+'</option>').join("");
+    const studyStatuses=["registered","submitted","under_review","counselling_scheduled","profile_assessment","university_shortlisting","university_application","offer_received","deposit_pending","visa_documentation","visa_submitted","visa_decision","pre_departure","awaiting_client","completed","on_hold"];
+    const tourismStatuses=["registered","submitted","under_review","consultation_scheduled","itinerary_planning","documents_pending","visa_documentation","visa_submitted","visa_decision","travel_ready","awaiting_client","completed","on_hold"];
+    const statusOptions=(a.applicationType==="tourism"?tourismStatuses:studyStatuses).map(v=>'<option value="'+v+'" '+((a.progressStatus||"registered")===v?"selected":"")+'>'+v.replaceAll("_"," ")+'</option>').join("");
     const privateNotes=(notesByApplication.get(a.id)||[]).sort((x,y)=>{const xv=x.createdAt?.toMillis?x.createdAt.toMillis():0,yv=y.createdAt?.toMillis?y.createdAt.toMillis():0;return yv-xv;});
     const privateNotesMarkup=privateNotes.length?'<details class="private-notes"><summary>Private counsellor notes ('+privateNotes.length+')</summary>'+privateNotes.map(n=>'<div class="private-note-entry"><p>'+esc(n.note)+'</p><small>'+esc(formatCaseDate(n.createdAt))+'</small></div>').join("")+'</details>':'<p class="private-notes-empty">No internal notes recorded yet.</p>';
-    return '<article class="case-item"><div class="item-head"><div><strong>'+esc(a.applicantFullName||"Study Abroad applicant")+'</strong><br><small>'+esc(a.applyingFor||"Myself")+' · '+esc(a.applicationType==="study_abroad"?"Study Abroad":a.applicationType)+'</small></div><span class="pill">'+esc((a.progressStatus||"submitted").replaceAll("_"," "))+'</span></div><div class="case-meta"><span class="muted">Submitted: '+esc(formatCaseDate(a.createdAt))+'</span><span class="muted">Counsellor: '+esc(a.assignedCounsellorName||"Not assigned")+'</span></div>'+caseDetailsMarkup(a)+privateNotesMarkup+'<div class="case-controls">'+assignment+
+    return '<article class="case-item"><div class="item-head"><div><strong>'+esc(a.applicantFullName||"Study Abroad applicant")+'</strong><br><small>'+esc(a.applyingFor||"Myself")+' · '+esc(a.applicationType==="study_abroad"?"Study Abroad":a.applicationType)+'</small></div><span class="pill">'+esc((a.progressStatus||"registered").replaceAll("_"," "))+'</span></div><div class="case-meta"><span class="muted">Submitted: '+esc(formatCaseDate(a.createdAt))+'</span><span class="muted">Counsellor: '+esc(a.assignedCounsellorName||"Not assigned")+'</span></div>'+caseDetailsMarkup(a)+privateNotesMarkup+'<div class="case-controls">'+assignment+
     '<label>Progress status<select data-status="'+esc(a.id)+'">'+statusOptions+'</select></label>'+
     '<div class="case-university-fields '+((a.progressStatus||"").includes("university_application")?"":"hidden")+'" data-university-fields="'+esc(a.id)+'"><strong>University application details</strong>'+
     '<label>University name<input data-university-name="'+esc(a.id)+'" value="'+esc(a.universityDetails?.universityName||"")+'" placeholder="University name"></label>'+
