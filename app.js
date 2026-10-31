@@ -32,8 +32,11 @@ function setMode(nextMode) {
     ? "Create your free client account and start your journey with Quorista Overseas."
     : "Sign in to continue your journey with Quorista Overseas.";
   $("name-field").classList.toggle("hidden", !signup);
+  $("phone-field").classList.toggle("hidden", !signup);
   $("full-name").required = signup;
+  $("phone").required = signup;
   $("full-name").value = "";
+  $("phone").value = "";
   $("auth-submit").innerHTML = signup ? "Create account <span>→</span>" : "Sign in <span>→</span>";
   $("mode-prompt").textContent = signup ? "Already have an account?" : "New to Quorista?";
   $("mode-toggle").textContent = signup ? "Sign in" : "Create an account";
@@ -88,6 +91,7 @@ function populateProfile(user, profile) {
   $("profile-avatar").textContent = name.trim().charAt(0).toUpperCase() || "Q";
   $("detail-name").textContent = name;
   $("detail-email").textContent = email;
+  $("detail-phone").textContent = profile.phone || "Not provided";
   $("detail-provider").textContent = providerLabel(profile.authProvider || user.providerData.map((item) => item.providerId));
   $("detail-created").textContent = formatDate(profile.createdAt);
 }
@@ -97,45 +101,21 @@ async function renderMyCounsellor() {
   if (!root || !applicationUser) return;
   root.innerHTML = '<div class="content-panel empty-panel"><p class="muted">Loading your counsellor details…</p></div>';
   try {
-    const snapshot = await getDocs(query(collection(db, "applications"), where("clientUid", "==", applicationUser.uid)));
-    const assigned = new Map();
-    snapshot.docs.forEach((item) => {
-      const data = item.data();
-      if (!data.assignedCounsellorUid && !data.assignedCounsellorName) return;
-      const key = data.assignedCounsellorUid || data.assignedCounsellorName;
-      if (!assigned.has(key)) {
-        assigned.set(key, {
-          uid: data.assignedCounsellorUid || "",
-          name: data.assignedCounsellorName || "Quorista counsellor",
-          designation: data.assignedCounsellorDesignation || "Counsellor",
-          email: data.assignedCounsellorEmail || "",
-          services: new Set(),
-          applications: []
-        });
-      }
-      const person = assigned.get(key);
-      if (!person.email && data.assignedCounsellorEmail) person.email = data.assignedCounsellorEmail;
-      if (!person.designation && data.assignedCounsellorDesignation) person.designation = data.assignedCounsellorDesignation;
-      person.services.add(data.applicationType === "study_abroad" ? "Study Abroad" : data.applicationType === "tourism" ? "International Tourism" : "Quorista services");
-      person.applications.push(data.applicantFullName || "Client application");
-    });
-
-    if (!assigned.size) {
-      root.innerHTML = '<div class="content-panel empty-panel"><div class="empty-illustration counsellor-illustration"><span>✧</span><i>✦</i></div><span class="section-kicker">PERSONAL GUIDANCE</span><h3>Your counsellor will appear here</h3><p>Your Quorista counsellor will be displayed here as soon as one is assigned to your application.</p><div class="coming-soon-tag"><span></span> Awaiting counsellor assignment</div></div>';
+    const profileSnap = await getDoc(doc(db, "users", applicationUser.uid));
+    const profile = profileSnap.exists() ? profileSnap.data() : {};
+    if (!profile.assignedCounsellorUid) {
+      root.innerHTML = '<div class="content-panel empty-panel"><div class="empty-illustration counsellor-illustration"><span>✧</span><i>✦</i></div><span class="section-kicker">PERSONAL GUIDANCE</span><h3>Your counsellor will appear here</h3><p>Your Quorista team will assign a counsellor to your account. They can contact you directly using the phone number and email you registered with, even before you complete the optional questionnaire.</p><div class="coming-soon-tag"><span></span> Awaiting counsellor assignment</div></div>';
       return;
     }
-
-    root.innerHTML = '<div class="counsellor-intro"><span class="section-kicker">YOUR QUORISTA SUPPORT</span><h3>Meet your counsellor</h3><p>Your assigned point of contact for the applications listed below.</p></div><div class="counsellor-card-grid">' +
-      [...assigned.values()].map((person) => {
-        const email = person.email ? '<a class="counsellor-email" href="mailto:' + escapeApplicationHtml(person.email) + '">' + escapeApplicationHtml(person.email) + '</a>' : '<span class="counsellor-unavailable">Contact email not available yet</span>';
-        return '<article class="counsellor-profile-card"><div class="counsellor-profile-top"><div class="counsellor-avatar">' + escapeApplicationHtml((person.name.trim().charAt(0) || "Q").toUpperCase()) + '</div><div><span class="section-kicker">YOUR COUNSELLOR</span><h4>' + escapeApplicationHtml(person.name) + '</h4><p>' + escapeApplicationHtml(person.designation) + '</p></div></div><div class="counsellor-detail-row"><span>EMAIL</span>' + email + '</div><div class="counsellor-detail-row"><span>SERVICE</span><strong>' + escapeApplicationHtml([...person.services].join(" · ")) + '</strong></div><div class="counsellor-detail-row"><span>ASSIGNED APPLICATIONS</span><strong>' + person.applications.length + '</strong></div><div class="counsellor-assigned-cases"><span>APPLICATIONS</span><p>' + escapeApplicationHtml([...new Set(person.applications)].join(" · ")) + '</p></div></article>';
-      }).join("") + '</div>';
+    const name = profile.assignedCounsellorName || "Quorista counsellor";
+    const email = profile.assignedCounsellorEmail || "";
+    const designation = profile.assignedCounsellorDesignation || "Counsellor";
+    root.innerHTML = '<div class="counsellor-intro"><span class="section-kicker">YOUR QUORISTA SUPPORT</span><h3>Meet your counsellor</h3><p>Your assigned point of contact at Quorista Overseas.</p></div><div class="counsellor-card-grid"><article class="counsellor-profile-card"><div class="counsellor-profile-top"><div class="counsellor-avatar">' + escapeApplicationHtml((name.trim().charAt(0) || "Q").toUpperCase()) + '</div><div><span class="section-kicker">YOUR COUNSELLOR</span><h4>' + escapeApplicationHtml(name) + '</h4><p>' + escapeApplicationHtml(designation) + '</p></div></div><div class="counsellor-detail-row"><span>EMAIL</span>' + (email ? '<a class="counsellor-email" href="mailto:' + escapeApplicationHtml(email) + '">' + escapeApplicationHtml(email) + '</a>' : '<span class="counsellor-unavailable">Contact email not available yet</span>') + '</div><div class="counsellor-detail-row"><span>PHONE / WHATSAPP</span><strong>Our counsellor will contact you using your registered number.</strong></div></article></div>';
   } catch (error) {
     console.error("Could not load counsellor details:", error);
-    root.innerHTML = '<div class="content-panel empty-panel"><h3>We could not load your counsellor details</h3><p>Please try again in a moment. Your applications and progress updates are not affected.</p></div>';
+    root.innerHTML = '<div class="content-panel empty-panel"><h3>We could not load your counsellor details</h3><p>Please try again in a moment.</p></div>';
   }
 }
-
 
 
 /* Study Abroad application workspace */
@@ -333,6 +313,7 @@ async function saveApplication(submit) {
       applicantFullName: applicationData.applicantFullName || "",
       applyingFor: applicationData.applyingFor || "Myself",
       applicationType: "study_abroad",
+      ...(applicationProfile?.assignedCounsellorUid ? { assignedCounsellorUid: applicationProfile.assignedCounsellorUid, assignedCounsellorName: applicationProfile.assignedCounsellorName || "", assignedCounsellorDesignation: applicationProfile.assignedCounsellorDesignation || "", assignedCounsellorEmail: applicationProfile.assignedCounsellorEmail || "" } : {}),
       status: submit ? "submitted" : "draft",
       formVersion: 1,
       formData: applicationData,
@@ -426,7 +407,7 @@ function showDashboard(user, profile) {
   showPage("overview");
 }
 
-async function ensureClientProfile(user, fullName = "") {
+async function ensureClientProfile(user, fullName = "", phone = "") {
   const userRef = doc(db, "users", user.uid);
   const existing = await getDoc(userRef);
   if (existing.exists()) {
@@ -438,9 +419,12 @@ async function ensureClientProfile(user, fullName = "") {
     return data;
   }
   const name = fullName || user.displayName || (user.email ? user.email.split("@")[0] : "Client");
+  const normalizedPhone = String(phone || "").trim();
+  if (!normalizedPhone) throw new Error("Please provide your phone / WhatsApp number, including country code, to create your client profile.");
   const profile = {
     fullName: name,
     email: user.email || "",
+    phone: normalizedPhone,
     role: "client",
     accountStatus: "active",
     createdAt: serverTimestamp(),
@@ -482,10 +466,12 @@ $("auth-form").addEventListener("submit", async (event) => {
   try {
     if (mode === "signup") {
       const fullName = $("full-name").value.trim();
+      const phone = $("phone").value.trim();
       if (!fullName) throw new Error("Please enter your full name.");
+      if (!phone) throw new Error("Please enter your phone / WhatsApp number, including country code.");
       const credential = await createUserWithEmailAndPassword(auth, $("email").value.trim(), $("password").value);
       await updateProfile(credential.user, { displayName: fullName });
-      const profile = await ensureClientProfile(credential.user, fullName);
+      const profile = await ensureClientProfile(credential.user, fullName, phone);
       showDashboard(credential.user, profile);
     } else {
       const credential = await signInWithEmailAndPassword(auth, $("email").value.trim(), $("password").value);
@@ -518,9 +504,24 @@ $("google-button").addEventListener("click", async () => {
   $("auth-submit").disabled = true;
   setMessage("");
   try {
+    if (mode === "signup" && (!$("full-name").value.trim() || !$("phone").value.trim())) throw new Error("Enter your full name and phone / WhatsApp number above before continuing with Google.");
     const credential = await signInWithPopup(auth, googleProvider);
-    const profile = await ensureClientProfile(credential.user);
-    showDashboard(credential.user, profile);
+    const existingProfile = await getDoc(doc(db, "users", credential.user.uid));
+    if (existingProfile.exists()) {
+      const profile = existingProfile.data();
+      if (profile.role !== "client" || profile.accountStatus !== "active") throw new Error("This account is not authorised for Client Portal access.");
+      showDashboard(credential.user, profile);
+    } else if (mode === "signup") {
+      const fullName = $("full-name").value.trim();
+      const profile = await ensureClientProfile(credential.user, fullName, $("phone").value.trim());
+      showDashboard(credential.user, profile);
+    } else {
+      await signOut(auth);
+      setMode("signup");
+      $("email").value = credential.user.email || "";
+      $("full-name").value = credential.user.displayName || "";
+      throw new Error("To create a new account with Google, choose Create an account, enter your phone / WhatsApp number, then continue with Google.");
+    }
   } catch (error) {
     const messages = {
       "auth/popup-closed-by-user": "Google sign-in was closed before completion.",
