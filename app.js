@@ -49,7 +49,7 @@ function setMode(nextMode) {
 }
 
 function showPage(page) {
-  const validPages = ["overview", "profile", "applications", "counsellor"];
+  const validPages = ["overview", "profile", "progress", "applications", "counsellor"];
   const selected = validPages.includes(page) ? page : "overview";
   validPages.forEach((name) => {
     $("page-" + name).classList.toggle("hidden", name !== selected);
@@ -60,11 +60,13 @@ function showPage(page) {
   const titles = {
     overview: ["Overview", "A clear view of your journey with us."],
     profile: ["My Profile", "Your registered account information."],
-    applications: ["My Case & Requirements", "Your registered case, progress and optional requirements."],
+    progress: ["Progress & Updates", "Your case stages and detailed updates from Quorista Overseas."],
+    applications: ["Optional Questionnaire", "Share additional requirements if you wish. This is not mandatory."],
     counsellor: ["My Counsellor", "Your personal guidance and support."]
   };
   $("page-title").textContent = titles[selected][0];
   $("page-subtitle").textContent = titles[selected][1];
+  if (selected === "progress" && applicationUser) loadClientProgress();
   if (selected === "applications" && applicationUser) renderApplicationWorkspace();
   if (selected === "counsellor" && applicationUser) renderMyCounsellor();
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -199,15 +201,14 @@ function applicationInput(field) {
   if (type === "textarea") {
     return '<label class="application-field application-field-wide"><span>' + label + '</span><textarea name="' + name + '" rows="4" placeholder="Add any relevant details...">' + safeValue + '</textarea></label>';
   }
-  return '<label class="application-field"><span>' + label + '</span><input name="' + name + '" type="' + type + '" value="' + safeValue + '" ' + (name === "applicantFullName" ? 'required ' : '') + 'placeholder="' + (type === "date" ? "" : "Enter " + label.toLowerCase()) + '"></label>';
+  return '<label class="application-field"><span>' + label + '</span><input name="' + name + '" type="' + type + '" value="' + safeValue + '" ' + "" + 'placeholder="' + (type === "date" ? "" : "Enter " + label.toLowerCase()) + '"></label>';
 }
 
 function renderApplicationWorkspace() {
   const root = $("application-workspace");
   if (!root) return;
   if (applicationProfile?.serviceType === "tourism") {
-    root.innerHTML = '<div class="application-topline"><div><span class="section-kicker">INTERNATIONAL TOURISM</span><h3>Your tourism case is registered</h3><p>Your Quorista team will discuss your destination, travel dates and requirements with you. You do not need to complete the Study Abroad questionnaire.</p></div></div><div class="application-drafts"><div id="application-list" class="application-list"><p class="muted">Loading your case…</p></div></div>';
-    loadClientApplications();
+    root.innerHTML = '<div class="questionnaire-intro-card tourism-questionnaire-card"><span class="section-kicker">INTERNATIONAL TOURISM</span><h3>No questionnaire is required for your tourism case</h3><p>Your case is already registered. Your Quorista team will discuss your destination, travel dates and requirements with you directly. You can follow all progress in the separate Progress & Updates section.</p><span class="questionnaire-optional-tag">No action required</span></div>';
     return;
   }
   root.innerHTML = `
@@ -222,10 +223,10 @@ function renderApplicationWorkspace() {
         <div class="application-actions"><button type="button" class="button-secondary" id="application-back" ${applicationStep === 0 ? "disabled" : ""}>Back</button><div><button type="button" class="button-secondary" id="application-save">Save draft</button><button type="button" class="application-primary" id="application-next">${applicationStep === 6 ? "Save requirements" : "Continue"} <span>→</span></button></div></div>
       </div>
     </div>
-    <div class="application-drafts"><div><span class="section-kicker">YOUR WORKSPACE</span><h3>Your case</h3></div><div id="application-list" class="application-list"><p class="muted">Loading your applications…</p></div></div>`;
+    <div class="questionnaire-privacy-note"><span>✦</span><div><strong>Your case is already registered</strong><p>This questionnaire is optional. You can skip it and your counsellor can still contact you and continue working on your case.</p></div></div>`;
   const fieldsRoot = $("application-fields");
   if (applicationStep === 6) {
-    fieldsRoot.innerHTML = '<div class="application-review">' + applicationFields.flat().map(([name,label]) => '<div class="review-item"><span>' + label + '</span><strong>' + (applicationData[name] ? escapeApplicationHtml(applicationData[name]) : 'Not provided') + '</strong></div>').join("") + '</div><p class="application-review-note">Please review your details carefully. Once submitted, this application will be shared with your assigned Quorista counsellor and cannot be edited from this form.</p>';
+    fieldsRoot.innerHTML = '<div class="application-review">' + applicationFields.flat().map(([name,label]) => '<div class="review-item"><span>' + label + '</span><strong>' + (applicationData[name] ? escapeApplicationHtml(applicationData[name]) : 'Not provided') + '</strong></div>').join("") + '</div><p class="application-review-note">These are optional requirements to help your counsellor understand your preferences. Saving them updates your existing case; it does not create or submit a new application.</p>';
   } else {
     fieldsRoot.innerHTML = '<div class="application-fields-grid">' + applicationFields[applicationStep].map(applicationInput).join("") + '</div>';
   }
@@ -250,7 +251,6 @@ function renderApplicationWorkspace() {
     }
   });
   $("application-save").addEventListener("click", () => { collectApplicationFields(); saveApplication(false); });
-  loadClientApplications();
 }
 
 function collectApplicationFields() {
@@ -260,7 +260,7 @@ function collectApplicationFields() {
 }
 
 function validateApplicationStep() {
-  if (applicationStep === 0 && !applicationData.applicantFullName) {
+  if (applicationStep === 0 && !(applicationData.applicantFullName || applicationProfile?.fullName)) {
     showApplicationMessage("Please enter the applicant's full name.");
     return false;
   }
@@ -327,7 +327,7 @@ async function saveApplication(submit) {
     });
     applicationDraftId = existingCase.id;
     showApplicationMessage("Your optional requirements questionnaire has been saved to your existing case. No new application was created.", false);
-    await loadClientApplications();
+    // Case progress is displayed separately from the optional questionnaire.
   } catch (error) {
     console.error("Requirements questionnaire save failed:", error);
     showApplicationMessage(error.message || "We couldn't save your requirements. Please try again.");
@@ -337,14 +337,15 @@ async function saveApplication(submit) {
     if ($("application-next")) $("application-next").disabled = false;
   }
 }
-async function loadClientApplications() {
-  const list = $("application-list");
-  if (!list || !applicationUser) return;
+async function loadClientProgress() {
+  const root = $("client-progress-workspace");
+  if (!root || !applicationUser) return;
+  root.innerHTML = '<div class="content-panel"><p class="muted">Loading your case progress…</p></div>';
   try {
     const ownApplications = query(collection(db, "applications"), where("clientUid", "==", applicationUser.uid));
     const snapshot = await getDocs(ownApplications);
     if (snapshot.empty) {
-      list.innerHTML = '<p class="muted">No saved applications yet. Your first application can be started above.</p>';
+      root.innerHTML = '<div class="content-panel empty-panel"><div class="empty-illustration"><span>◷</span><i>✦</i></div><span class="section-kicker">YOUR JOURNEY</span><h3>Your case is being prepared</h3><p>Your registered case and all future progress updates will appear here. Your Quorista team can contact you even if you leave the optional questionnaire blank.</p></div>';
       return;
     }
     const updateSnapshot = await getDocs(query(collection(db, "status_updates"), where("clientUid", "==", applicationUser.uid)));
@@ -355,36 +356,43 @@ async function loadClientApplications() {
       bucket.push(update);
       updatesByApplication.set(update.applicationId, bucket);
     });
-    list.innerHTML = snapshot.docs.map(item => {
-      const data = item.data();
-      const status = data.questionnaireStatus === "completed" ? "Requirements shared" : "Case registered";
-      const progress = (data.progressStatus || "registered").replaceAll("_", " ");
-      const progressLabel = progress.charAt(0).toUpperCase() + progress.slice(1);
-      const counsellor = data.assignedCounsellorName || "";
-      const update = data.progressUpdate || "";
-      const history = (updatesByApplication.get(item.id) || []).sort((a,b) => {
-        const av = a.createdAt?.toMillis ? a.createdAt.toMillis() : new Date(a.createdAt || 0).getTime();
-        const bv = b.createdAt?.toMillis ? b.createdAt.toMillis() : new Date(b.createdAt || 0).getTime();
-        return bv - av;
-      });
-      const historyMarkup = history.length ? '<div class="client-progress-history"><strong>Progress history</strong>' + history.map(entry => '<div class="client-progress-entry"><span>' + escapeApplicationHtml(formatDate(entry.createdAt)) + '</span><p>' + escapeApplicationHtml(entry.clientMessage || "Your application status has been updated.") + '</p></div>').join("") + '</div>' : '';
-      const serviceLabel = data.applicationType === "tourism" ? "International Tourism" : "Study Abroad";
-      return '<article class="application-list-item"><div><strong>' + escapeApplicationHtml(data.applicantFullName || "Client case") + '</strong><span>' + escapeApplicationHtml(status) + ' · ' + serviceLabel + '</span></div>' +
-        '<div class="application-submitted-label">Case progress: ' + escapeApplicationHtml(progressLabel) + '</div>' +
-        '<div class="client-case-details"><p><strong>Assigned counsellor:</strong> ' + escapeApplicationHtml(counsellor || "Not assigned yet") + '</p><p><strong>Latest update:</strong> ' + escapeApplicationHtml(update || "Your case is registered. Your counsellor will contact you about the next steps.") + '</p>' + historyMarkup + '</div></article>';
-    }).join("");
-    list.querySelectorAll("[data-resume-app]").forEach(button => button.addEventListener("click", async () => {
-      const id = button.dataset.resumeApp;
-      const record = snapshot.docs.find(item => item.id === id);
-      if (!record) return;
-      applicationDraftId = id;
-      applicationData = { ...(record.data().formData || {}) };
-      applicationStep = 0;
-      renderApplicationWorkspace();
-    }));
+    const statusLabel = value => String(value || "registered").replaceAll("_", " ").replace(/\b\w/g, letter => letter.toUpperCase());
+    root.innerHTML = '<div class="progress-page-intro"><span class="section-kicker">YOUR QUORISTA JOURNEY</span><h3>Every step, clearly explained.</h3><p>See where each case stands and read the updates shared by your counsellor and the Quorista team.</p></div>' +
+      snapshot.docs.map(item => {
+        const data = item.data();
+        const serviceLabel = data.applicationType === "tourism" ? "International Tourism" : "Study Abroad";
+        const history = (updatesByApplication.get(item.id) || []).sort((x,y) => {
+          const xv = x.createdAt?.toMillis ? x.createdAt.toMillis() : new Date(x.createdAt || 0).getTime();
+          const yv = y.createdAt?.toMillis ? y.createdAt.toMillis() : new Date(y.createdAt || 0).getTime();
+          return yv - xv;
+        });
+        const currentStatus = statusLabel(data.progressStatus);
+        const latestMessage = data.progressUpdate || "Your case is registered. Your Quorista counsellor will contact you about the next steps.";
+        const latestDate = data.lastProgressUpdatedAt || data.updatedAt || data.createdAt;
+        const latestUniversity = data.universityDetails || {};
+        const latestUniversityMarkup = data.progressStatus === "university_application" && latestUniversity.universityName
+          ? '<div class="university-update-details"><span class="update-detail-kicker">UNIVERSITY APPLICATION</span><div class="university-update-grid">' +
+            [['University',latestUniversity.universityName],['Country',latestUniversity.country],['Programme',latestUniversity.programLevel],['Intake',latestUniversity.intake]].filter(pair => pair[1]).map(pair => '<div><span>' + escapeApplicationHtml(pair[0]) + '</span><strong>' + escapeApplicationHtml(pair[1]) + '</strong></div>').join("") +
+            '</div></div>' : "";
+        const historyMarkup = history.length
+          ? '<div class="progress-history-heading"><span class="section-kicker">UPDATE HISTORY</span><h4>Previous updates</h4></div><div class="progress-timeline">' +
+            history.map(entry => {
+              const details = entry.universityDetails || (entry.status === "university_application" ? latestUniversity : null);
+              const detailMarkup = details && details.universityName
+                ? '<div class="university-update-details compact"><span class="update-detail-kicker">UNIVERSITY DETAILS</span><div class="university-update-grid">' +
+                  [['University',details.universityName],['Country',details.country],['Programme',details.programLevel],['Intake',details.intake]].filter(pair => pair[1]).map(pair => '<div><span>' + escapeApplicationHtml(pair[0]) + '</span><strong>' + escapeApplicationHtml(pair[1]) + '</strong></div>').join("") +
+                  '</div></div>' : "";
+              return '<article class="progress-timeline-entry"><div class="timeline-marker"></div><div class="timeline-entry-card"><div class="timeline-entry-meta"><strong>' + escapeApplicationHtml(statusLabel(entry.status)) + '</strong><span>' + escapeApplicationHtml(formatDate(entry.createdAt)) + '</span></div><p>' + escapeApplicationHtml(entry.clientMessage || "Your application status has been updated.") + '</p>' + detailMarkup + '</div></article>';
+            }).join("") + '</div>'
+          : '<div class="progress-empty-history">Your Quorista team has not posted a progress update yet. Your current case stage is shown above.</div>';
+        return '<article class="client-progress-card"><div class="client-progress-card-head"><div><span class="progress-service-tag">' + escapeApplicationHtml(serviceLabel) + '</span><h4>' + escapeApplicationHtml(data.applicantFullName || "Your case") + '</h4><p>Case registered ' + escapeApplicationHtml(formatDate(data.createdAt)) + '</p></div><span class="progress-status-pill">' + escapeApplicationHtml(currentStatus) + '</span></div>' +
+          '<div class="progress-summary-grid"><div><span>CURRENT STAGE</span><strong>' + escapeApplicationHtml(currentStatus) + '</strong></div><div><span>YOUR COUNSELLOR</span><strong>' + escapeApplicationHtml(data.assignedCounsellorName || "Awaiting assignment") + '</strong></div></div>' +
+          '<section class="latest-progress-update"><div class="latest-update-top"><span class="section-kicker">LATEST UPDATE FROM QUORISTA</span><span>' + escapeApplicationHtml(formatDate(latestDate)) + '</span></div><p>' + escapeApplicationHtml(latestMessage) + '</p>' + latestUniversityMarkup + '</section>' +
+          historyMarkup + '</article>';
+      }).join("");
   } catch (error) {
-    console.error("Could not load client applications:", error);
-    list.innerHTML = '<p class="muted">Your applications could not be loaded right now.</p>';
+    console.error("Could not load client progress:", error);
+    root.innerHTML = '<div class="content-panel empty-panel"><h3>We could not load your progress updates</h3><p>Please try again in a moment.</p></div>';
   }
 }
 
