@@ -308,7 +308,7 @@ function showApplicationMessage(message, isError = true) {
 
 async function saveApplication(submit) {
   if (applicationBusy || !applicationUser) return;
-  if (submit && !applicationData.applicantFullName) { applicationStep = 0; renderApplicationWorkspace(); showApplicationMessage("Please enter the applicant's full name."); return; }
+  if (submit && !(applicationData.applicantFullName || applicationProfile?.fullName)) { applicationStep = 0; renderApplicationWorkspace(); showApplicationMessage("Please check the applicant name before saving your optional requirements."); return; }
   applicationBusy = true;
   const saveButton = $("application-save"), nextButton = $("application-next");
   if (saveButton) saveButton.disabled = true;
