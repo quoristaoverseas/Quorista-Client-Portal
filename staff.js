@@ -202,7 +202,7 @@ async function loadCases(){
       counselling_scheduled:"A counselling discussion is being arranged for your application.",
       profile_assessment:"Your academic and personal profile is being assessed.",
       university_shortlisting:"We are reviewing suitable university and course options for your preferences.",
-      university_application:"Your university application is being prepared or processed.",
+      university_application:"Your university application is currently in progress. Our team is coordinating the required application steps and will keep you informed of any developments.",
       offer_received:"An admission decision or offer has been received. Your counsellor will guide you through the next steps.",
       deposit_pending:"The next step involves reviewing the university deposit requirements and deadlines.",
       visa_documentation:"We are working through the documentation requirements for your visa stage.",
@@ -220,9 +220,11 @@ async function loadCases(){
      const manual=root.querySelector('[data-note="'+id+'"]').value.trim();
      let clientMessage=manual||statusLabels[status]||"Your application status has been updated.";
      if(status==="university_application"){
-      const detail=[universityDetails.universityName,universityDetails.country,universityDetails.programLevel,universityDetails.intake].filter(Boolean).join(" · ");
-      if(detail)clientMessage+=" Details: "+detail+".";
       if(!universityDetails.universityName||!universityDetails.country||!universityDetails.programLevel||!universityDetails.intake)throw new Error("Complete university name, country, program level and intake before saving this stage.");
+      const levelLabels={bachelors:"Bachelor's",bachelor:"Bachelor's",masters:"Master's",master:"Master's",phd:"PhD",doctorate:"doctoral"};
+      const rawLevel=universityDetails.programLevel.trim();
+      const level=levelLabels[rawLevel.toLowerCase()]||rawLevel;
+      clientMessage="Your application for the "+level+" programme at "+universityDetails.universityName+" in "+universityDetails.country+" for the "+universityDetails.intake+" intake is currently in progress. Our team is coordinating the required application steps and will keep you informed of any developments.";
      }
      const followDate=root.querySelector('[data-followup-date="'+id+'"]').value;
      const followAction=root.querySelector('[data-followup-action="'+id+'"]').value.trim();
