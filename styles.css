@@ -69,3 +69,11 @@ body.dashboard-active .hero{align-items:flex-start;min-height:100vh;padding:112p
 @keyframes applicationFadeIn{from{opacity:0}to{opacity:1}}
 @keyframes applicationPopIn{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
 @media(max-width:600px){.application-success-card{padding:30px 22px 24px}.application-success-card h3{font-size:1.25rem}}
+
+/* Client-visible progress timeline */
+.client-progress-history{margin-top:16px;padding-top:14px;border-top:1px solid #eeeaf5}
+.client-progress-history>strong{display:block;margin-bottom:10px;color:#342b65;font:800 .72rem Manrope,sans-serif;letter-spacing:.04em}
+.client-progress-entry{position:relative;margin:0 0 11px 5px;padding:0 0 3px 15px;border-left:2px solid #e6e0fa}
+.client-progress-entry:before{content:"";position:absolute;left:-5px;top:4px;width:8px;height:8px;border-radius:50%;background:#7257d8}
+.client-progress-entry span{display:block;color:#89839d;font-size:.64rem;font-weight:700}
+.client-progress-entry p{margin:3px 0 0;color:#514b6d;font-size:.75rem;line-height:1.6}
