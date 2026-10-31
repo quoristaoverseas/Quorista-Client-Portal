@@ -95,7 +95,6 @@ function caseDetailsMarkup(a){
  const entries=[
   ["Application ID",a.id],
   ["Applicant",a.applicantFullName],
-  ["Applying for",a.applyingFor],
   ["Application type",a.applicationType==="study_abroad"?"Study Abroad":a.applicationType],
   ["Submission date",formatCaseDate(a.createdAt)],
   ["Last updated",formatCaseDate(a.updatedAt)],
