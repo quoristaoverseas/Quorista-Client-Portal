@@ -4,7 +4,7 @@ import {
   GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut,
   updateProfile
 } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, serverTimestamp, collection, query, where, getDocs, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
@@ -58,6 +58,7 @@ function showPage(page) {
   };
   $("page-title").textContent = titles[selected][0];
   $("page-subtitle").textContent = titles[selected][1];
+  if (selected === "applications" && applicationUser) renderApplicationWorkspace();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -90,7 +91,238 @@ function populateProfile(user, profile) {
   $("detail-created").textContent = formatDate(profile.createdAt);
 }
 
+
+
+/* Study Abroad application workspace */
+const applicationSteps = [
+  { title: "Applicant details", subtitle: "Tell us who this application is for." },
+  { title: "Education background", subtitle: "Share your most recent academic information." },
+  { title: "Study preferences", subtitle: "Tell us what and where you would like to study." },
+  { title: "English proficiency", subtitle: "Share your current English-language test status." },
+  { title: "Budget and funding", subtitle: "Help us understand your estimated study budget." },
+  { title: "Plans and additional details", subtitle: "Tell us your preferred timeline and anything else we should know." },
+  { title: "Review your application", subtitle: "Check your answers before saving or submitting." }
+];
+let applicationUser = null;
+let applicationProfile = null;
+let applicationDraftId = null;
+let applicationStep = 0;
+let applicationData = {};
+let applicationBusy = false;
+
+const applicationFields = [
+  [
+    ["applyingFor", "Who are you applying for?", "select", ["Myself", "My child", "Spouse / partner", "Another family member"]],
+    ["applicantFullName", "Applicant's full name", "text"],
+    ["dateOfBirth", "Date of birth", "date"],
+    ["nationality", "Nationality", "text"],
+    ["countryOfResidence", "Country of residence", "text"],
+    ["applicantEmail", "Applicant's email address", "email"],
+    ["applicantPhone", "Applicant's phone / WhatsApp number", "tel"]
+  ],
+  [
+    ["highestQualification", "Highest qualification completed", "select", ["Secondary school", "Higher secondary / A-levels", "Diploma", "Bachelor's degree", "Master's degree", "Doctorate", "Other"]],
+    ["studyField", "Main subject / field of study", "text"],
+    ["institutionName", "Most recent institution", "text"],
+    ["graduationYear", "Year completed (or expected)", "number"],
+    ["academicScore", "Grades / percentage / GPA", "text"],
+    ["backlogs", "Any pending or previous backlogs?", "select", ["No", "Yes", "Not applicable"]]
+  ],
+  [
+    ["destinationCountries", "Preferred destination country / countries", "text"],
+    ["studyLevel", "Level you want to study", "select", ["Foundation", "Undergraduate", "Postgraduate", "Doctorate", "Diploma / Certificate", "Not sure yet"]],
+    ["subjectInterest", "Preferred course or subject", "text"],
+    ["intake", "Preferred intake (month and year)", "text"],
+    ["studyMode", "Preferred study mode", "select", ["On campus", "Online", "Flexible / hybrid", "Not sure yet"]]
+  ],
+  [
+    ["englishTest", "English-language test status", "select", ["IELTS", "TOEFL", "PTE", "Duolingo English Test", "Other test", "Not taken yet", "Planning to take a test", "Test waiver may apply"]],
+    ["englishScore", "Score (if available)", "text"],
+    ["englishTestDate", "Test date (if taken)", "date"]
+  ],
+  [
+    ["budgetCurrency", "Budget currency", "select", ["INR", "USD", "GBP", "EUR", "CAD", "AUD", "Other"]],
+    ["annualBudget", "Estimated annual tuition budget", "text"],
+    ["fundingSource", "How do you plan to fund your studies?", "select", ["Self-funded", "Parents / family", "Education loan", "Scholarship", "Combination of sources", "Not decided yet"]],
+    ["scholarshipInterest", "Would you like scholarship guidance?", "select", ["Yes", "No", "Not sure"]]
+  ],
+  [
+    ["startTimeline", "When would you like to begin?", "select", ["As soon as possible", "Within 3 months", "Within 6 months", "Within 12 months", "More than 12 months", "Just exploring"]],
+    ["visaHistory", "Have you previously applied for an international study visa?", "select", ["No", "Yes — approved", "Yes — refused", "Prefer to discuss with counsellor"]],
+    ["additionalNotes", "Anything else you'd like our counsellor to know?", "textarea"]
+  ]
+];
+
+function escapeApplicationHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  })[char]);
+}
+
+function applicationInput(field) {
+  const [name, label, type, options] = field;
+  const value = applicationData[name] || "";
+  const safeValue = escapeApplicationHtml(value);
+  if (type === "select") {
+    return '<label class="application-field"><span>' + label + '</span><select name="' + name + '"><option value="">Select an option</option>' +
+      options.map(option => '<option value="' + escapeApplicationHtml(option) + '"' + (value === option ? " selected" : "") + '>' + escapeApplicationHtml(option) + '</option>').join("") +
+      '</select></label>';
+  }
+  if (type === "textarea") {
+    return '<label class="application-field application-field-wide"><span>' + label + '</span><textarea name="' + name + '" rows="4" placeholder="Add any relevant details...">' + safeValue + '</textarea></label>';
+  }
+  return '<label class="application-field"><span>' + label + '</span><input name="' + name + '" type="' + type + '" value="' + safeValue + '" ' + (name === "applicantFullName" ? 'required ' : '') + 'placeholder="' + (type === "date" ? "" : "Enter " + label.toLowerCase()) + '"></label>';
+}
+
+function renderApplicationWorkspace() {
+  const root = $("application-workspace");
+  if (!root) return;
+  root.innerHTML = `
+    <div class="application-topline"><div><span class="section-kicker">STUDY ABROAD</span><h3>Start an application</h3><p>Complete the sections at your own pace. You can save a draft and return later.</p></div><span class="application-private"><i></i> Private until submitted</span></div>
+    <div class="application-layout">
+      <aside class="application-steps">${applicationSteps.map((step, index) => '<button type="button" class="application-step ' + (index === applicationStep ? 'active ' : '') + (index < applicationStep ? 'completed' : '') + '" data-app-step="' + index + '"><span class="step-number">' + (index < applicationStep ? '✓' : String(index + 1).padStart(2, "0")) + '</span><span><strong>' + step.title + '</strong><small>' + (index === 6 ? 'Final check' : 'Section ' + (index + 1)) + '</small></span></button>').join("")}</aside>
+      <div class="application-form-panel">
+        <div class="application-progress"><span style="width:${((applicationStep + 1) / applicationSteps.length) * 100}%"></span></div>
+        <div class="application-step-heading"><span>STEP ${String(applicationStep + 1).padStart(2, "0")} OF 07</span><h4>${applicationSteps[applicationStep].title}</h4><p>${applicationSteps[applicationStep].subtitle}</p></div>
+        <div id="application-fields" class="application-fields"></div>
+        <div class="application-message" id="application-message" role="status" aria-live="polite"></div>
+        <div class="application-actions"><button type="button" class="button-secondary" id="application-back" ${applicationStep === 0 ? "disabled" : ""}>Back</button><div><button type="button" class="button-secondary" id="application-save">Save draft</button><button type="button" class="application-primary" id="application-next">${applicationStep === 6 ? "Submit application" : "Continue"} <span>→</span></button></div></div>
+      </div>
+    </div>
+    <div class="application-drafts"><div><span class="section-kicker">YOUR WORKSPACE</span><h3>Saved applications</h3></div><div id="application-list" class="application-list"><p class="muted">Loading your applications…</p></div></div>`;
+  const fieldsRoot = $("application-fields");
+  if (applicationStep === 6) {
+    fieldsRoot.innerHTML = '<div class="application-review">' + applicationFields.flat().map(([name,label]) => '<div class="review-item"><span>' + label + '</span><strong>' + (applicationData[name] ? escapeApplicationHtml(applicationData[name]) : 'Not provided') + '</strong></div>').join("") + '</div><p class="application-review-note">Please review your details carefully. Once submitted, this application will be shared with your assigned Quorista counsellor and cannot be edited from this form.</p>';
+  } else {
+    fieldsRoot.innerHTML = '<div class="application-fields-grid">' + applicationFields[applicationStep].map(applicationInput).join("") + '</div>';
+  }
+  fieldsRoot.querySelectorAll("input,select,textarea").forEach(input => {
+    input.addEventListener("input", () => { applicationData[input.name] = input.value; });
+    input.addEventListener("change", () => { applicationData[input.name] = input.value; });
+  });
+  root.querySelectorAll("[data-app-step]").forEach(button => button.addEventListener("click", () => {
+    collectApplicationFields();
+    applicationStep = Number(button.dataset.appStep);
+    renderApplicationWorkspace();
+  }));
+  $("application-back").addEventListener("click", () => { collectApplicationFields(); applicationStep = Math.max(0, applicationStep - 1); renderApplicationWorkspace(); });
+  $("application-next").addEventListener("click", async () => {
+    collectApplicationFields();
+    if (applicationStep < 6) {
+      if (!validateApplicationStep()) return;
+      applicationStep++;
+      renderApplicationWorkspace();
+    } else {
+      await saveApplication(true);
+    }
+  });
+  $("application-save").addEventListener("click", () => { collectApplicationFields(); saveApplication(false); });
+  loadClientApplications();
+}
+
+function collectApplicationFields() {
+  document.querySelectorAll("#application-fields [name]").forEach(input => {
+    applicationData[input.name] = input.value.trim();
+  });
+}
+
+function validateApplicationStep() {
+  if (applicationStep === 0 && !applicationData.applicantFullName) {
+    showApplicationMessage("Please enter the applicant's full name.");
+    return false;
+  }
+  showApplicationMessage("");
+  return true;
+}
+
+function showApplicationMessage(message, isError = true) {
+  const node = $("application-message");
+  if (node) {
+    node.textContent = message;
+    node.classList.toggle("error", isError);
+  }
+}
+
+async function saveApplication(submit) {
+  if (applicationBusy) return;
+  if (!applicationUser) { showApplicationMessage("Please sign in again to continue."); return; }
+  if (submit && !applicationData.applicantFullName) { applicationStep = 0; renderApplicationWorkspace(); showApplicationMessage("Please enter the applicant's full name before submitting."); return; }
+  applicationBusy = true;
+  const saveButton = $("application-save");
+  const submitButton = $("application-next");
+  if (saveButton) saveButton.disabled = true;
+  if (submitButton) submitButton.disabled = true;
+  try {
+    const payload = {
+      clientUid: applicationUser.uid,
+      applicantFullName: applicationData.applicantFullName || "",
+      applyingFor: applicationData.applyingFor || "Myself",
+      applicationType: "study_abroad",
+      status: submit ? "submitted" : "draft",
+      formVersion: 1,
+      formData: applicationData,
+      updatedAt: serverTimestamp()
+    };
+    if (applicationDraftId) {
+      await updateDoc(doc(db, "applications", applicationDraftId), payload);
+    } else {
+      payload.createdAt = serverTimestamp();
+      const created = await addDoc(collection(db, "applications"), payload);
+      applicationDraftId = created.id;
+    }
+    showApplicationMessage(submit ? "Your application has been submitted successfully." : "Your draft has been saved.", false);
+    if (submit) {
+      applicationDraftId = null;
+      applicationData = {};
+      applicationStep = 0;
+      renderApplicationWorkspace();
+    } else {
+      await loadClientApplications();
+    }
+  } catch (error) {
+    console.error("Application save failed:", error);
+    showApplicationMessage("We couldn't save this application. Please try again. If the problem continues, contact Quorista support.");
+  } finally {
+    applicationBusy = false;
+    if ($("application-save")) $("application-save").disabled = false;
+    if ($("application-next")) $("application-next").disabled = false;
+  }
+}
+
+async function loadClientApplications() {
+  const list = $("application-list");
+  if (!list || !applicationUser) return;
+  try {
+    const ownApplications = query(collection(db, "applications"), where("clientUid", "==", applicationUser.uid));
+    const snapshot = await getDocs(ownApplications);
+    if (snapshot.empty) {
+      list.innerHTML = '<p class="muted">No saved applications yet. Your first application can be started above.</p>';
+      return;
+    }
+    list.innerHTML = snapshot.docs.map(item => {
+      const data = item.data();
+      const status = data.status === "submitted" ? "Submitted" : "Draft";
+      return '<article class="application-list-item"><div><strong>' + escapeApplicationHtml(data.applicantFullName || "Study Abroad application") + '</strong><span>' + escapeApplicationHtml(status) + ' · Study Abroad</span></div>' +
+        (data.status === "draft" ? '<button type="button" data-resume-app="' + item.id + '">Continue draft →</button>' : '<span class="application-submitted-label">Submitted</span>') + '</article>';
+    }).join("");
+    list.querySelectorAll("[data-resume-app]").forEach(button => button.addEventListener("click", async () => {
+      const id = button.dataset.resumeApp;
+      const record = snapshot.docs.find(item => item.id === id);
+      if (!record) return;
+      applicationDraftId = id;
+      applicationData = { ...(record.data().formData || {}) };
+      applicationStep = 0;
+      renderApplicationWorkspace();
+    }));
+  } catch (error) {
+    console.error("Could not load client applications:", error);
+    list.innerHTML = '<p class="muted">Your applications could not be loaded right now.</p>';
+  }
+}
+
 function showDashboard(user, profile) {
+  applicationUser = user;
+  applicationProfile = profile;
   document.body.classList.add("dashboard-active");
   populateProfile(user, profile);
   $("auth-view").classList.add("hidden");
@@ -213,6 +445,10 @@ $("google-button").addEventListener("click", async () => {
 onAuthStateChanged(auth, async (user) => {
   if (authActionInProgress) return;
   if (!user) {
+    applicationUser = null;
+    applicationProfile = null;
+    applicationDraftId = null;
+    applicationData = {};
     document.body.classList.remove("dashboard-active");
     $("auth-view").classList.remove("hidden");
     $("dashboard-view").classList.add("hidden");
