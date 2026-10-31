@@ -124,3 +124,18 @@ button,a,.overview-card,.application-step,.counsellor-profile-card{transition:co
 button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid rgba(255,176,32,.55);outline-offset:2px}
 @media(hover:hover){.overview-card:hover,.counsellor-profile-card:hover{transform:translateY(-3px);box-shadow:0 20px 42px rgba(16,6,92,.1)}}
 @media(max-width:600px){.site-header{background:rgba(7,4,39,.98)}.dashboard{border-radius:16px}.dashboard-main{padding:18px 15px}}
+
+
+/* Branded portal identity and navigation polish */
+.dashboard-brand{flex-direction:column;align-items:flex-start;justify-content:center;gap:7px;padding:0 10px}
+.dashboard-brand img{display:block;width:154px;height:39px;object-fit:contain;object-position:left center;filter:brightness(0) saturate(100%) invert(10%) sepia(40%) saturate(4035%) hue-rotate(239deg) brightness(75%) contrast(110%)}
+.dashboard-brand-name{font-size:.59rem;letter-spacing:.17em;color:#77738f}
+.dashboard-mobile-title{display:flex;align-items:center;gap:10px;color:#10065c;font:800 .64rem Manrope;letter-spacing:.12em}
+.dashboard-mobile-title img{width:132px;height:34px;object-fit:contain;filter:brightness(0) invert(1)}
+.dashboard-mobile-brand{padding:9px 0 14px;border-bottom:1px solid rgba(255,255,255,.13)}
+.dashboard-mobile-brand .button-secondary{border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;border-radius:999px;padding:8px 13px}
+.dashboard-heading{padding-bottom:18px;border-bottom:1px solid rgba(16,6,92,.09)}
+.dashboard-heading h2{letter-spacing:-.04em}
+.section-heading{margin-top:27px}
+.dashboard-footer{padding:22px 10px 5px;text-align:center;font-size:.68rem;letter-spacing:.015em}
+@media(max-width:600px){.dashboard-mobile-title img{width:116px}.dashboard-mobile-title{font-size:.58rem}}
