@@ -139,3 +139,20 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .section-heading{margin-top:27px}
 .dashboard-footer{padding:22px 10px 5px;text-align:center;font-size:.68rem;letter-spacing:.015em}
 @media(max-width:600px){.dashboard-mobile-title img{width:116px}.dashboard-mobile-title{font-size:.58rem}}
+
+
+/* Refined service selection cards — registration */
+.service-options{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin:10px 0 8px}
+.service-option{position:relative;display:flex;align-items:flex-start;gap:11px;min-width:0;min-height:116px;padding:15px 13px;border:1px solid #e4e0ef;border-radius:14px;background:linear-gradient(145deg,#fff 0%,#fbfaff 100%);cursor:pointer;transition:border-color .22s ease,background .22s ease,box-shadow .22s ease,transform .22s ease}
+.service-option input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.service-option-icon{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;border-radius:11px;background:#eeeaff;color:#5b3df5;font-size:1.1rem}
+.service-option-icon.tourism-icon{background:#fff1e8;color:#d97942}
+.service-option-copy{display:grid;gap:5px;min-width:0;padding-top:1px}
+.service-option-copy strong{font:800 .78rem Manrope,sans-serif;color:#10065c;line-height:1.35}
+.service-option-copy small{font-size:.67rem;line-height:1.5;color:#77738f;font-weight:500}
+.service-option-check{position:absolute;right:10px;top:10px;display:grid;place-items:center;width:19px;height:19px;border:1px solid #ded9ee;border-radius:50%;color:transparent;font-size:.65rem;background:#fff;transition:all .2s ease}
+.service-option:has(input:checked){border-color:#7861db;background:linear-gradient(145deg,#f7f4ff 0%,#fff 100%);box-shadow:0 0 0 3px rgba(91,61,245,.09),0 10px 24px rgba(16,6,92,.07);transform:translateY(-1px)}
+.service-option:has(input:checked) .service-option-check{background:#5b3df5;border-color:#5b3df5;color:#fff}
+.service-option:has(input:focus-visible){outline:3px solid rgba(255,176,32,.55);outline-offset:3px}
+.service-hint{display:block;margin-top:2px}
+@media(max-width:600px){.service-options{grid-template-columns:1fr;gap:9px}.service-option{min-height:92px;padding:13px}.service-option-copy small{max-width:290px}}
