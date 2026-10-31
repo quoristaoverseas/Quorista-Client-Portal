@@ -58,7 +58,7 @@ function showPage(page) {
   const titles = {
     overview: ["Overview", "A clear view of your journey with us."],
     profile: ["My Profile", "Your registered account information."],
-    applications: ["My Applications", "Your study and travel applications in one place."],
+    applications: ["My Case & Requirements", "Your registered case, progress and optional requirements."],
     counsellor: ["My Counsellor", "Your personal guidance and support."]
   };
   $("page-title").textContent = titles[selected][0];
@@ -210,7 +210,7 @@ function renderApplicationWorkspace() {
     return;
   }
   root.innerHTML = `
-    <div class="application-topline"><div><span class="section-kicker">STUDY ABROAD</span><h3>Optional requirements questionnaire</h3><p>Share these details if you wish. Your case already exists and your counsellor can contact you even if you skip this questionnaire.</p></div><span class="application-private"><i></i> Private until submitted</span></div>
+    <div class="application-topline"><div><span class="section-kicker">STUDY ABROAD</span><h3>Optional requirements questionnaire</h3><p>Share these details if you wish. Your case already exists and your counsellor can contact you even if you skip this questionnaire.</p></div><span class="application-private"><i></i> Private to your Quorista team</span></div>
     <div class="application-layout">
       <aside class="application-steps">${applicationSteps.map((step, index) => '<button type="button" class="application-step ' + (index === applicationStep ? 'active ' : '') + (index < applicationStep ? 'completed' : '') + '" data-app-step="' + index + '"><span class="step-number">' + (index < applicationStep ? '✓' : String(index + 1).padStart(2, "0")) + '</span><span><strong>' + step.title + '</strong><small>' + (index === 6 ? 'Final check' : 'Section ' + (index + 1)) + '</small></span></button>').join("")}</aside>
       <div class="application-form-panel">
@@ -356,8 +356,8 @@ async function loadClientApplications() {
     });
     list.innerHTML = snapshot.docs.map(item => {
       const data = item.data();
-      const status = data.status === "submitted" ? "Submitted" : "Draft";
-      const progress = (data.progressStatus || (data.status === "submitted" ? "submitted" : "draft")).replaceAll("_", " ");
+      const status = data.questionnaireStatus === "completed" ? "Requirements shared" : "Case registered";
+      const progress = (data.progressStatus || "registered").replaceAll("_", " ");
       const progressLabel = progress.charAt(0).toUpperCase() + progress.slice(1);
       const counsellor = data.assignedCounsellorName || "";
       const update = data.progressUpdate || "";
@@ -367,9 +367,10 @@ async function loadClientApplications() {
         return bv - av;
       });
       const historyMarkup = history.length ? '<div class="client-progress-history"><strong>Progress history</strong>' + history.map(entry => '<div class="client-progress-entry"><span>' + escapeApplicationHtml(formatDate(entry.createdAt)) + '</span><p>' + escapeApplicationHtml(entry.clientMessage || "Your application status has been updated.") + '</p></div>').join("") + '</div>' : '';
-      return '<article class="application-list-item"><div><strong>' + escapeApplicationHtml(data.applicantFullName || "Study Abroad application") + '</strong><span>' + escapeApplicationHtml(status) + ' · Study Abroad</span></div>' +
-        (data.status === "draft" ? '<button type="button" data-resume-app="' + item.id + '">Continue draft →</button>' : '<div class="application-submitted-label">Application: ' + escapeApplicationHtml(progressLabel) + '</div>') +
-        (data.status === "submitted" ? '<div class="client-case-details"><p><strong>Assigned counsellor:</strong> ' + escapeApplicationHtml(counsellor || "Not assigned yet") + '</p><p><strong>Latest update:</strong> ' + escapeApplicationHtml(update || "Your application has been received. Updates will appear here as your case progresses.") + '</p>' + historyMarkup + '</div>' : '') + '</article>';
+      const serviceLabel = data.applicationType === "tourism" ? "International Tourism" : "Study Abroad";
+      return '<article class="application-list-item"><div><strong>' + escapeApplicationHtml(data.applicantFullName || "Client case") + '</strong><span>' + escapeApplicationHtml(status) + ' · ' + serviceLabel + '</span></div>' +
+        '<div class="application-submitted-label">Case progress: ' + escapeApplicationHtml(progressLabel) + '</div>' +
+        '<div class="client-case-details"><p><strong>Assigned counsellor:</strong> ' + escapeApplicationHtml(counsellor || "Not assigned yet") + '</p><p><strong>Latest update:</strong> ' + escapeApplicationHtml(update || "Your case is registered. Your counsellor will contact you about the next steps.") + '</p>' + historyMarkup + '</div></article>';
     }).join("");
     list.querySelectorAll("[data-resume-app]").forEach(button => button.addEventListener("click", async () => {
       const id = button.dataset.resumeApp;
