@@ -10,7 +10,7 @@ const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 function message(id,text,ok=false){$(id).textContent=text;$(id).style.color=ok?"#23835f":"#a33228";}
 function servicesLabel(a=[]){return a.map(x=>x==="study_abroad"?"Study Abroad":"International Tourism").join(" · ")||"No service permission";}
 function showWorkspaceView(view){
- const allowed=["overview","cases","followups","team"];
+ const allowed=["overview","clients","cases","followups","team"];
  const selected=allowed.includes(view)?view:"overview";
  document.querySelectorAll(".workspace-view").forEach(section=>section.classList.toggle("hidden",section.id!=="view-"+selected));
  document.querySelectorAll(".workspace-nav").forEach(button=>button.classList.toggle("active",button.dataset.view===selected));
@@ -34,7 +34,7 @@ async function enterWorkspace(user){
  $("view-team").classList.toggle("hidden",!isAdmin);
  showWorkspaceView("overview");
  $("owner-profile-panel").classList.toggle("hidden",!isAdmin||!!staffProfile);
- await loadStaff();await loadCases();await loadFollowUps();
+ await loadStaff();await loadClientDirectory();await loadCases();await loadFollowUps();
 }
 async function loadStaff(){
  if(!isAdmin)return;
@@ -80,6 +80,62 @@ async function loadStaff(){
   try{await updateDoc(doc(db,"staff",uid),{active:!active,updatedAt:serverTimestamp()});await loadStaff();}
   catch(e){alert("Could not change staff access: "+e.message);btn.disabled=false;}
  }));
+}
+async function loadClientDirectory(){
+ const root=$("client-directory-list");
+ if(!root)return;
+ root.innerHTML='<p class="muted">Loading client accounts…</p>';
+ try{
+  let snap;
+  if(isAdmin) snap=await getDocs(collection(db,"users"));
+  else snap=await getDocs(query(collection(db,"users"),where("assignedCounsellorUid","==",currentUser.uid)));
+  const clients=snap.docs.map(d=>({uid:d.id,...d.data()})).filter(c=>c.role==="client"&&c.accountStatus==="active");
+  clients.sort((a,b)=>{
+   const av=a.createdAt?.toMillis?a.createdAt.toMillis():new Date(a.createdAt||0).getTime();
+   const bv=b.createdAt?.toMillis?b.createdAt.toMillis():new Date(b.createdAt||0).getTime();
+   return bv-av;
+  });
+  $("client-directory-count").textContent=clients.length+" registered client"+(clients.length===1?"":"s");
+  let activeStaff=[];
+  if(isAdmin){
+   const staffSnap=await getDocs(collection(db,"staff"));
+   activeStaff=staffSnap.docs.map(d=>({uid:d.id,...d.data()})).filter(s=>s.active&&s.role!=="super_admin");
+  }
+  if(!clients.length){
+   root.innerHTML='<div class="empty">No registered client accounts yet. New sign-ups will appear here automatically.</div>';
+   return;
+  }
+  root.innerHTML=clients.map(c=>{
+   const assignmentOptions=activeStaff.map(s=>'<option value="'+esc(s.uid)+'" '+(c.assignedCounsellorUid===s.uid?'selected':'')+'>'+esc(s.fullName||s.email)+' · '+esc(servicesLabel(s.services||[]))+'</option>').join("");
+   const assigned=c.assignedCounsellorName?'<span class="pill active">'+esc(c.assignedCounsellorName)+'</span>':'<span class="pill inactive">Unassigned</span>';
+   const assignmentControl=isAdmin?'<div class="client-assign-control"><label>Assign counsellor<select data-client-assign="'+esc(c.uid)+'"><option value="">Leave unassigned</option>'+assignmentOptions+'</select></label><button class="primary" type="button" data-client-save="'+esc(c.uid)+'">Save assignment</button></div>':'';
+   const phone=c.phone?'<a href="tel:'+esc(c.phone)+'">'+esc(c.phone)+'</a>':'<span class="muted">Not provided</span>';
+   const email=c.email?'<a href="mailto:'+esc(c.email)+'">'+esc(c.email)+'</a>':'<span class="muted">Not provided</span>';
+   const date=formatCaseDate(c.createdAt);
+   return '<article class="client-directory-card" data-client-card="'+esc(c.uid)+'"><div class="item-head"><div><strong>'+esc(c.fullName||"Client")+'</strong><br><small>Registered '+esc(date)+'</small></div>'+assigned+'</div><div class="client-directory-meta"><div><span>EMAIL</span>'+email+'</div><div><span>PHONE / WHATSAPP</span>'+phone+'</div><div><span>QUESTIONNAIRE</span><strong>Optional · '+(c.questionnaireCompleted?"Completed":"Not completed")+'</strong></div><div><span>ACCOUNT</span><strong>Active client</strong></div></div>'+assignmentControl+'</article>';
+  }).join("");
+  root.querySelectorAll("[data-client-save]").forEach(button=>button.addEventListener("click",async()=>{
+   const uid=button.dataset.clientSave;
+   const card=button.closest("[data-client-card]");
+   const selectedUid=card.querySelector("[data-client-assign]").value;
+   const selected=activeStaff.find(s=>s.uid===selectedUid);
+   button.disabled=true;button.textContent="Saving…";
+   try{
+    await updateDoc(doc(db,"users",uid),{
+     assignedCounsellorUid:selected?selected.uid:"",
+     assignedCounsellorName:selected?selected.fullName||"Counsellor":"",
+     assignedCounsellorDesignation:selected?selected.designation||"Counsellor":"",
+     assignedCounsellorEmail:selected?selected.email||"":"",
+     assignedAt:selected?serverTimestamp():null,
+     updatedAt:serverTimestamp()
+    });
+    await loadClientDirectory();
+   }catch(error){alert("Could not update client assignment: "+error.message);button.disabled=false;button.textContent="Save assignment";}
+  }));
+ }catch(error){
+  console.error("Client directory could not be loaded:",error);
+  root.innerHTML='<div class="empty">Client accounts could not be loaded. Check the published Firestore rules and try again.</div>';
+ }
 }
 function formatCaseDate(value){
  if(!value)return "Not recorded";
@@ -303,6 +359,7 @@ $("login-form").addEventListener("submit",async e=>{e.preventDefault();$("login-
 $("staff-form").addEventListener("submit",async e=>{e.preventDefault();const services=[...document.querySelectorAll('input[name="service"]:checked')].map(x=>x.value);if(!services.length){message("staff-message","Select at least one permitted service.");return;}const uid=$("staff-uid").value.trim();if(!uid||uid===ADMIN_UID){message("staff-message","Enter the counsellor's own Firebase Authentication UID. Your administrator account is already reserved.");return;}try{const existing=await getDoc(doc(db,"staff",uid));if(existing.exists()){message("staff-message","A profile already exists for this UID. Edit it in the Authorised staff list instead; existing access was not changed.");return;}await setDoc(doc(db,"staff",uid),{fullName:$("staff-name").value.trim(),email:$("staff-email").value.trim(),designation:$("staff-title").value.trim(),role:"counsellor",services,active:true,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});message("staff-message","Counsellor profile created successfully.",true);e.target.reset();$("staff-title").value="Study Abroad Counsellor";await loadStaff();}catch(err){message("staff-message","Could not save: "+err.message);}});
 $("activate-owner").addEventListener("click",async()=>{try{await setDoc(doc(db,"staff",currentUser.uid),{fullName:"Adarsh Srivastava",email:currentUser.email||"",designation:"Co-Founder & Immigration Consultant",role:"super_admin",services:["study_abroad"],active:true,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});await enterWorkspace(currentUser);}catch(e){message("owner-message",e.message);}});
 $("refresh").addEventListener("click",loadCases);
+$("refresh-clients")?.addEventListener("click",loadClientDirectory);
 $("refresh-followups")?.addEventListener("click",loadFollowUps);
 $("signout").addEventListener("click",async()=>{
  const button=$("signout");
