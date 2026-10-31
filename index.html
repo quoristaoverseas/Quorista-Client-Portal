@@ -9,7 +9,7 @@
 <title>My Quorista | Quorista Overseas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./styles.css?v=20261101-brand2">
+<link rel="stylesheet" href="./styles.css?v=20261101-progress1">
 </head>
 <body>
 <header class="site-header"><div class="nav-wrap"><a class="brand" href="https://quoristaoverseas.in/" aria-label="Quorista Overseas home"><img src="https://quoristaoverseas.in/assets/quorista-logo.png" alt="Quorista Overseas"></a><nav><a href="https://quoristaoverseas.in/#study">Study Abroad</a><a href="https://quoristaoverseas.in/#travel">Tourism</a><a class="nav-cta" href="https://quoristaoverseas.in/">← Back to Home</a></nav></div></header>
@@ -40,7 +40,8 @@
 <nav class="dashboard-nav" aria-label="Client dashboard">
 <button class="dashboard-nav-item active" data-page="overview"><span class="nav-symbol">⌂</span> Overview</button>
 <button class="dashboard-nav-item" data-page="profile"><span class="nav-symbol">◉</span> My Profile</button>
-<button class="dashboard-nav-item" data-page="applications"><span class="nav-symbol">▤</span> My Case & Requirements</button>
+<button class="dashboard-nav-item" data-page="progress"><span class="nav-symbol">◷</span> Progress & Updates</button>
+<button class="dashboard-nav-item" data-page="applications"><span class="nav-symbol">▤</span> Optional Questionnaire</button>
 <button class="dashboard-nav-item" data-page="counsellor"><span class="nav-symbol">✧</span> My Counsellor</button>
 </nav>
 <div class="sidebar-bottom"><div class="sidebar-help"><span class="help-icon">?</span><div><strong>Need assistance?</strong><a href="https://quoristaoverseas.in/#contact">Contact Quorista</a></div></div><button class="signout-button" id="signout-button"><span>↪</span> Sign out</button></div>
@@ -68,6 +69,10 @@
 <p class="privacy-note">Your account details are securely associated with your sign-in. To request a correction to your registered information, please contact Quorista Overseas.</p></div>
 </section>
 
+<section class="dashboard-page hidden" id="page-progress">
+<div id="client-progress-workspace"><div class="content-panel empty-panel"><div class="empty-illustration"><span>◷</span><i>✦</i></div><span class="section-kicker">YOUR JOURNEY</span><h3>Your progress updates will appear here</h3><p>Follow each registered case, see its current stage and read detailed updates shared by your Quorista team.</p></div></div>
+</section>
+
 <section class="dashboard-page hidden" id="page-applications">
 <div id="application-workspace" class="application-workspace"><div class="content-panel empty-panel"><div class="empty-illustration"><span>▤</span><i>✦</i></div><span class="section-kicker">YOUR JOURNEY</span><h3>Your registered case will appear here</h3><p>Your case is created automatically when you register. The Study Abroad requirements questionnaire is optional.</p></div></div>
 </section>
@@ -80,5 +85,5 @@
 </section>
 <footer class="auth-footer" id="auth-footer">© <span id="year-auth"></span> Quorista Overseas <i>•</i> Study <i>•</i> Travel <i>•</i> Beyond Borders</footer>
 </section></div></main>
-<script type="module" src="./app.js?v=3"></script>
+<script type="module" src="./app.js?v=4"></script>
 </body></html>
