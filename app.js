@@ -35,8 +35,12 @@ function setMode(nextMode) {
   $("phone-field").classList.toggle("hidden", !signup);
   $("service-field").classList.toggle("hidden", !signup);
   $("full-name").required = signup;
-  $("service-type").required = signup;
-  if (signup) $("service-type").value = "";
+  $("service-type").required = false;
+  document.querySelectorAll('input[name="service-choice"]').forEach((choice) => {
+    choice.required = signup;
+    choice.checked = false;
+  });
+  $("service-type").value = "";
   $("phone").required = signup;
   $("full-name").value = "";
   $("phone").value = "";
@@ -459,6 +463,12 @@ async function loadExistingClient(user) {
 }
 
 $("mode-toggle").addEventListener("click", () => setMode(mode === "login" ? "signup" : "login"));
+
+document.querySelectorAll('input[name="service-choice"]').forEach((choice) => {
+  choice.addEventListener("change", () => {
+    $("service-type").value = choice.value;
+  });
+});
 
 document.querySelectorAll(".dashboard-nav-item").forEach((button) => {
   button.addEventListener("click", () => showPage(button.dataset.page));
