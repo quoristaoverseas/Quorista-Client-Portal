@@ -70,25 +70,90 @@ async function loadStaff(){
   catch(e){alert("Could not change staff access: "+e.message);btn.disabled=false;}
  }));
 }
+function formatCaseDate(value){
+ if(!value)return "Not recorded";
+ const date=typeof value.toDate==="function"?value.toDate():new Date(value);
+ return Number.isNaN(date.getTime())?"Not recorded":new Intl.DateTimeFormat("en-IN",{day:"numeric",month:"short",year:"numeric"}).format(date);
+}
+function caseFieldLabel(key){
+ return key.replace(/([A-Z])/g," $1").replace(/^./,s=>s.toUpperCase()).replace(/Uid/g,"UID").replace(/Url/g,"URL");
+}
+function caseDetailsMarkup(a){
+ const data=a.formData&&typeof a.formData==="object"?a.formData:{};
+ const fields=Object.entries(data).filter(([key,value])=>value!==null&&value!==undefined&&String(value).trim()!=="");
+ const entries=[
+  ["Application ID",a.id],
+  ["Applicant",a.applicantFullName],
+  ["Applying for",a.applyingFor],
+  ["Application type",a.applicationType==="study_abroad"?"Study Abroad":a.applicationType],
+  ["Submission date",formatCaseDate(a.createdAt)],
+  ["Last updated",formatCaseDate(a.updatedAt)],
+  ...fields.map(([key,value])=>[caseFieldLabel(key),Array.isArray(value)?value.join(", "):String(value)])
+ ];
+ return '<details class="case-detail"><summary>View full application details</summary><div class="case-detail-grid">'+entries.map(([label,value])=>'<div class="case-detail-item '+(/notes|reason|explain|other/i.test(label)?"wide":"")+'"><span>'+esc(label)+'</span><strong>'+esc(value||"Not provided")+'</strong></div>').join("")+'</div></details>';
+}
 async function loadCases(){
  const root=$("case-list");root.innerHTML='<p class="muted">Loading applications…</p>';
  try{
-  let snap;
   let docs=[];
   if(isAdmin){const all=await getDocs(collection(db,"applications"));docs=all.docs;}
-  else{const permitted=staffProfile?.services||[];const batches=await Promise.all(permitted.map(service=>getDocs(query(collection(db,"applications"),where("assignedCounsellorUid","==",currentUser.uid),where("applicationType","==",service)))));docs=batches.flatMap(batch=>batch.docs);}
+  else{
+   const permitted=staffProfile?.services||[];
+   const batches=await Promise.all(permitted.map(service=>getDocs(query(collection(db,"applications"),where("assignedCounsellorUid","==",currentUser.uid),where("applicationType","==",service)))));
+   docs=batches.flatMap(batch=>batch.docs);
+  }
   const records=docs.map(d=>({id:d.id,...d.data()})).filter(a=>a.status==="submitted");
-  if(!records.length){root.innerHTML='<div class="empty">No submitted applications are currently assigned to this account.</div>';return;}
   const staffSnap=isAdmin?await getDocs(collection(db,"staff")):null;
   const staff=staffSnap?staffSnap.docs.map(d=>({uid:d.id,...d.data()})).filter(s=>s.active):[];
-  root.innerHTML=records.map(a=>{
-   const choices=staff.filter(s=>(s.services||[]).includes(a.applicationType)).map(s=>'<option value="'+esc(s.uid)+'" '+(a.assignedCounsellorUid===s.uid?'selected':'')+'>'+esc(s.fullName)+' · '+esc(servicesLabel(s.services))+'</option>').join("");
-   const assignment=isAdmin?'<label>Assign counsellor<select data-assign="'+a.id+'"><option value="">Unassigned</option>'+choices+'</select></label>':'';
-   const statusOptions=["submitted","under_review","contacted","in_progress","awaiting_client","completed","on_hold"].map(v=>'<option value="'+v+'" '+((a.progressStatus||"submitted")===v?"selected":"")+'>'+v.replaceAll("_"," ")+'</option>').join("");
-   return '<article class="case-item"><div class="item-head"><div><strong>'+esc(a.applicantFullName||"Study Abroad applicant")+'</strong><br><small>'+esc(a.applyingFor||"Myself")+' · '+esc(a.applicationType)+'</small></div><span class="pill">'+esc((a.progressStatus||"submitted").replaceAll("_"," "))+'</span></div><div class="case-meta"><span class="muted">Client UID: '+esc(a.clientUid)+'</span><span class="muted">Assigned: '+esc(a.assignedCounsellorUid||"Not assigned")+'</span></div><div class="case-controls">'+assignment+'<label>Progress status<select data-status="'+a.id+'">'+statusOptions+'</select></label><label>Client-visible progress update<textarea data-note="'+a.id+'" placeholder="Write a concise update for the client">'+esc(a.progressUpdate||"")+'</textarea></label><button class="primary" data-save="'+a.id+'">Save update</button></div></article>';
-  }).join("");
-  root.querySelectorAll("[data-assign]").forEach(el=>el.addEventListener("change",async()=>{try{const uid=el.value||null;const chosen=staff.find(function(person){return person.uid===uid;});await updateDoc(doc(db,"applications",el.dataset.assign),{assignedCounsellorUid:uid,assignedCounsellorName:chosen?chosen.fullName:"",assignedCounsellorDesignation:chosen?chosen.designation:"",assignedAt:serverTimestamp(),updatedAt:serverTimestamp()});await loadCases();}catch(e){alert(e.message);}}));
-  root.querySelectorAll("[data-save]").forEach(btn=>btn.addEventListener("click",async()=>{const id=btn.dataset.save;btn.disabled=true;try{const patch={progressStatus:root.querySelector('[data-status="'+id+'"]').value,progressUpdate:root.querySelector('[data-note="'+id+'"]').value.trim(),lastProgressUpdatedAt:serverTimestamp(),updatedAt:serverTimestamp()};await updateDoc(doc(db,"applications",id),patch);message("login-message","");await loadCases();}catch(e){alert("Could not save update: "+e.message);}finally{btn.disabled=false;}}));
+  const search=$("case-search"),statusFilter=$("case-status-filter"),serviceFilter=$("case-service-filter"),assignmentFilter=$("case-assignment-filter"),sortFilter=$("case-sort");
+  const render=()=>{
+   const term=(search?.value||"").trim().toLowerCase();
+   const status=statusFilter?.value||"all",service=serviceFilter?.value||"all",assignment=assignmentFilter?.value||"all",sort=sortFilter?.value||"newest";
+   let shown=records.filter(a=>{
+    if(status!=="all"&&(a.progressStatus||"submitted")!==status)return false;
+    if(service!=="all"&&a.applicationType!==service)return false;
+    if(assignment==="assigned"&&!a.assignedCounsellorUid)return false;
+    if(assignment==="unassigned"&&a.assignedCounsellorUid)return false;
+    if(term){
+     const haystack=[a.applicantFullName,a.applyingFor,a.applicationType,a.clientUid,a.assignedCounsellorName,a.assignedCounsellorUid,a.progressStatus,a.progressUpdate,JSON.stringify(a.formData||{})].join(" ").toLowerCase();
+     if(!haystack.includes(term))return false;
+    }
+    return true;
+   });
+   shown.sort((a,b)=>{
+    if(sort==="name")return String(a.applicantFullName||"").localeCompare(String(b.applicantFullName||""));
+    if(sort==="status")return String(a.progressStatus||"submitted").localeCompare(String(b.progressStatus||"submitted"));
+    const av=a.createdAt?.toMillis?a.createdAt.toMillis():new Date(a.createdAt||0).getTime();
+    const bv=b.createdAt?.toMillis?b.createdAt.toMillis():new Date(b.createdAt||0).getTime();
+    return sort==="oldest"?av-bv:bv-av;
+   });
+   $("case-count").textContent="Showing "+shown.length+" of "+records.length+" submitted application"+(records.length===1?"":"s");
+   if(!shown.length){root.innerHTML='<div class="empty">'+(records.length?"No applications match these search and filter settings.":"No submitted applications are currently assigned to this account.")+'</div>';return;}
+   root.innerHTML=shown.map(a=>{
+    const choices=staff.filter(s=>(s.services||[]).includes(a.applicationType)).map(s=>'<option value="'+esc(s.uid)+'" '+(a.assignedCounsellorUid===s.uid?'selected':'')+'>'+esc(s.fullName)+' · '+esc(servicesLabel(s.services))+'</option>').join("");
+    const assignment=isAdmin?'<label>Assign counsellor<select data-assign="'+esc(a.id)+'"><option value="">Unassigned</option>'+choices+'</select></label>':'';
+    const statusOptions=["submitted","under_review","contacted","in_progress","awaiting_client","completed","on_hold"].map(v=>'<option value="'+v+'" '+((a.progressStatus||"submitted")===v?"selected":"")+'>'+v.replaceAll("_"," ")+'</option>').join("");
+    return '<article class="case-item"><div class="item-head"><div><strong>'+esc(a.applicantFullName||"Study Abroad applicant")+'</strong><br><small>'+esc(a.applyingFor||"Myself")+' · '+esc(a.applicationType==="study_abroad"?"Study Abroad":a.applicationType)+'</small></div><span class="pill">'+esc((a.progressStatus||"submitted").replaceAll("_"," "))+'</span></div><div class="case-meta"><span class="muted">Submitted: '+esc(formatCaseDate(a.createdAt))+'</span><span class="muted">Counsellor: '+esc(a.assignedCounsellorName||"Not assigned")+'</span></div>'+caseDetailsMarkup(a)+'<div class="case-controls">'+assignment+'<label>Progress status<select data-status="'+esc(a.id)+'">'+statusOptions+'</select></label><label>Client-visible progress update<textarea data-note="'+esc(a.id)+'" placeholder="Write a concise update for the client">'+esc(a.progressUpdate||"")+'</textarea></label><button class="primary" data-save="'+esc(a.id)+'">Save update</button></div></article>';
+   }).join("");
+   root.querySelectorAll("[data-assign]").forEach(el=>el.addEventListener("change",async()=>{
+    el.disabled=true;
+    try{
+     const uid=el.value||null,chosen=staff.find(person=>person.uid===uid);
+     await updateDoc(doc(db,"applications",el.dataset.assign),{assignedCounsellorUid:uid,assignedCounsellorName:chosen?chosen.fullName:"",assignedCounsellorDesignation:chosen?chosen.designation:"",assignedAt:serverTimestamp(),updatedAt:serverTimestamp()});
+     await loadCases();
+    }catch(e){alert("Could not assign this application: "+e.message);el.disabled=false;}
+   }));
+   root.querySelectorAll("[data-save]").forEach(btn=>btn.addEventListener("click",async()=>{
+    const id=btn.dataset.save;btn.disabled=true;btn.textContent="Saving…";
+    try{
+     const patch={progressStatus:root.querySelector('[data-status="'+id+'"]').value,progressUpdate:root.querySelector('[data-note="'+id+'"]').value.trim(),lastProgressUpdatedAt:serverTimestamp(),updatedAt:serverTimestamp()};
+     await updateDoc(doc(db,"applications",id),patch);
+     await loadCases();
+    }catch(e){alert("Could not save update: "+e.message);btn.disabled=false;btn.textContent="Save update";}
+   }));
+  };
+  [search,statusFilter,serviceFilter,assignmentFilter,sortFilter].forEach(control=>{if(control)control.oninput=render;});
+  render();
  }catch(e){console.error(e);root.innerHTML='<div class="empty">Applications could not be loaded. Check the published Firestore rules and try again.</div>';}
 }
 $("login-form").addEventListener("submit",async e=>{e.preventDefault();$("login-button").disabled=true;message("login-message","");try{const c=await signInWithEmailAndPassword(auth,$("email").value.trim(),$("password").value);await enterWorkspace(c.user);}catch(err){message("login-message",err.message||"Sign-in failed.");if(auth.currentUser)await signOut(auth).catch(()=>{});}finally{$("login-button").disabled=false;}});
