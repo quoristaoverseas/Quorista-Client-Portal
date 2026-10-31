@@ -421,7 +421,6 @@ async function ensureClientProfile(user, fullName = "", phone = "", serviceType 
     assignedCounsellorUid: "",
     assignedCounsellorName: "",
     assignedCounsellorDesignation: "",
-    assignedCounsellorEmail: "",
     role: "client",
     accountStatus: "active",
     createdAt: serverTimestamp(),
@@ -441,7 +440,7 @@ async function ensureClientCase(user, profile) {
   await setDoc(caseRef, {
     clientUid: user.uid, applicantFullName: profile.fullName || user.displayName || "Client", applyingFor: "Myself",
     applicationType: profile.serviceType, assignedCounsellorUid: "", assignedCounsellorName: "",
-    assignedCounsellorDesignation: "", assignedCounsellorEmail: "", status: "registered", progressStatus: "registered",
+    assignedCounsellorDesignation: "", status: "registered", progressStatus: "registered",
     progressUpdate: "Your account is registered. A Quorista team member will review your details and contact you about the next steps.",
     formVersion: 1, formData: {}, questionnaireStatus: "not_started", createdAt: serverTimestamp(), updatedAt: serverTimestamp()
   });
