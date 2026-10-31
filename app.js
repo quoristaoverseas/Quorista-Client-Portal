@@ -333,8 +333,13 @@ async function loadClientApplications() {
     list.innerHTML = snapshot.docs.map(item => {
       const data = item.data();
       const status = data.status === "submitted" ? "Submitted" : "Draft";
+      const progress = (data.progressStatus || (data.status === "submitted" ? "submitted" : "draft")).replaceAll("_", " ");
+      const progressLabel = progress.charAt(0).toUpperCase() + progress.slice(1);
+      const counsellor = data.assignedCounsellorName || "";
+      const update = data.progressUpdate || "";
       return '<article class="application-list-item"><div><strong>' + escapeApplicationHtml(data.applicantFullName || "Study Abroad application") + '</strong><span>' + escapeApplicationHtml(status) + ' · Study Abroad</span></div>' +
-        (data.status === "draft" ? '<button type="button" data-resume-app="' + item.id + '">Continue draft →</button>' : '<span class="application-submitted-label">Submitted</span>') + '</article>';
+        (data.status === "draft" ? '<button type="button" data-resume-app="' + item.id + '">Continue draft →</button>' : '<div class="application-submitted-label">Application: ' + escapeApplicationHtml(progressLabel) + '</div>') +
+        (data.status === "submitted" ? '<div class="client-case-details"><p><strong>Assigned counsellor:</strong> ' + escapeApplicationHtml(counsellor || "Not assigned yet") + '</p><p><strong>Latest update:</strong> ' + escapeApplicationHtml(update || "Your application has been received. Updates will appear here as your case progresses.") + '</p></div>' : '') + '</article>';
     }).join("");
     list.querySelectorAll("[data-resume-app]").forEach(button => button.addEventListener("click", async () => {
       const id = button.dataset.resumeApp;
