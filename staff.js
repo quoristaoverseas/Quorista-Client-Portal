@@ -10,7 +10,7 @@ const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 function message(id,text,ok=false){$(id).textContent=text;$(id).style.color=ok?"#23835f":"#a33228";}
 function servicesLabel(a=[]){return a.map(x=>x==="study_abroad"?"Study Abroad":"International Tourism").join(" · ")||"No service permission";}
 function showWorkspaceView(view){
- const allowed=["overview","cases","team"];
+ const allowed=["overview","cases","followups","team"];
  const selected=allowed.includes(view)?view:"overview";
  document.querySelectorAll(".workspace-view").forEach(section=>section.classList.toggle("hidden",section.id!=="view-"+selected));
  document.querySelectorAll(".workspace-nav").forEach(button=>button.classList.toggle("active",button.dataset.view===selected));
@@ -34,7 +34,7 @@ async function enterWorkspace(user){
  $("view-team").classList.toggle("hidden",!isAdmin);
  showWorkspaceView("overview");
  $("owner-profile-panel").classList.toggle("hidden",!isAdmin||!!staffProfile);
- await loadStaff();await loadCases();
+ await loadStaff();await loadCases();await loadFollowUps();
 }
 async function loadStaff(){
  if(!isAdmin)return;
@@ -232,10 +232,32 @@ async function loadCases(){
   render();
  }catch(e){console.error(e);root.innerHTML='<div class="empty">Applications could not be loaded. Check the published Firestore rules and try again.</div>';}
 }
-$("login-form").addEventListener("submit",async e=>{e.preventDefault();$("login-button").disabled=true;message("login-message","");try{const c=await signInWithEmailAndPassword(auth,$("email").value.trim(),$("password").value);await enterWorkspace(c.user);}catch(err){message("login-message",err.message||"Sign-in failed.");if(auth.currentUser)await signOut(auth).catch(()=>{});}finally{$("login-button").disabled=false;}});
+
+async function loadFollowUps(){
+ const root=$("follow-up-list");if(!root)return;
+ root.innerHTML='<p class="muted">Loading follow-ups…</p>';
+ try{
+  let docs=[];
+  if(isAdmin){const snap=await getDocs(collection(db,"follow_ups"));docs=snap.docs;}
+  else{
+   const services=staffProfile?.services||[];
+   const batches=await Promise.all(services.map(service=>getDocs(query(collection(db,"follow_ups"),where("assignedCounsellorUid","==",currentUser.uid),where("applicationType","==",service)))));
+   docs=batches.flatMap(batch=>batch.docs);
+  }
+  const items=docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>String(a.followUpDate||"").localeCompare(String(b.followUpDate||"")));
+  if(!items.length){root.innerHTML='<div class="empty">No follow-ups have been scheduled yet. Add a follow-up from a case in Case Management.</div>';return;}
+  root.innerHTML=items.map(item=>'<article class="followup-item"><div><strong>'+esc(item.action||"Follow-up")+'</strong><p>'+esc(item.followUpDate||"Date not set")+' · '+esc(item.applicationType==="study_abroad"?"Study Abroad":"International Tourism")+'</p><small>Application: '+esc(item.applicationId)+'</small></div><span class="pill '+(item.status==="completed"?"active":"inactive")+'">'+esc(item.status||"open")+'</span>'+(item.status==="completed"?'':'<button class="secondary" type="button" data-followup-complete="'+esc(item.id)+'">Mark complete</button>')+'</article>').join("");
+  root.querySelectorAll("[data-followup-complete]").forEach(button=>button.addEventListener("click",async()=>{
+   button.disabled=true;button.textContent="Updating…";
+   try{await updateDoc(doc(db,"follow_ups",button.dataset.followupComplete),{status:"completed",completedAt:serverTimestamp(),updatedAt:serverTimestamp()});await loadFollowUps();}
+   catch(error){alert("Could not complete follow-up: "+error.message);button.disabled=false;button.textContent="Mark complete";}
+  }));
+ }catch(error){console.error(error);root.innerHTML='<div class="empty">Follow-ups could not be loaded. Check Firestore permissions and try again.</div>';}
+}
+\n$("login-form").addEventListener("submit",async e=>{e.preventDefault();$("login-button").disabled=true;message("login-message","");try{const c=await signInWithEmailAndPassword(auth,$("email").value.trim(),$("password").value);await enterWorkspace(c.user);}catch(err){message("login-message",err.message||"Sign-in failed.");if(auth.currentUser)await signOut(auth).catch(()=>{});}finally{$("login-button").disabled=false;}});
 $("staff-form").addEventListener("submit",async e=>{e.preventDefault();const services=[...document.querySelectorAll('input[name="service"]:checked')].map(x=>x.value);if(!services.length){message("staff-message","Select at least one permitted service.");return;}const uid=$("staff-uid").value.trim();if(!uid||uid===ADMIN_UID){message("staff-message","Enter the counsellor's own Firebase Authentication UID. Your administrator account is already reserved.");return;}try{const existing=await getDoc(doc(db,"staff",uid));if(existing.exists()){message("staff-message","A profile already exists for this UID. Edit it in the Authorised staff list instead; existing access was not changed.");return;}await setDoc(doc(db,"staff",uid),{fullName:$("staff-name").value.trim(),email:$("staff-email").value.trim(),designation:$("staff-title").value.trim(),role:"counsellor",services,active:true,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});message("staff-message","Counsellor profile created successfully.",true);e.target.reset();$("staff-title").value="Study Abroad Counsellor";await loadStaff();}catch(err){message("staff-message","Could not save: "+err.message);}});
 $("activate-owner").addEventListener("click",async()=>{try{await setDoc(doc(db,"staff",currentUser.uid),{fullName:"Adarsh Srivastava",email:currentUser.email||"",designation:"Co-Founder & Immigration Consultant",role:"super_admin",services:["study_abroad"],active:true,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});await enterWorkspace(currentUser);}catch(e){message("owner-message",e.message);}});
-$("refresh").addEventListener("click",loadCases);
+$("refresh").addEventListener("click",loadCases);\n$("refresh-followups")?.addEventListener("click",loadFollowUps);
 $("signout").addEventListener("click",async()=>{
  const button=$("signout");
  button.disabled=true;
