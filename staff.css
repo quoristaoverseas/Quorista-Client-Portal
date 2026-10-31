@@ -103,9 +103,6 @@ footer{color:#9994aa}
 .welcome-banner .eyebrow{color:#bdb1ff}.welcome-banner h2{max-width:580px;margin:9px 0;color:#fff;font:800 clamp(1.35rem,2.5vw,2rem) Manrope;letter-spacing:-.04em}
 .welcome-banner p{max-width:600px;margin:0 0 18px;color:#d5d0ef;font-size:.82rem;line-height:1.7}
 .welcome-banner .primary{background:#fff;color:#3f2b9e;box-shadow:none}
-.banner-orbit{position:relative;display:grid;place-items:center;width:154px;height:154px;min-width:154px;border:1px solid rgba(255,255,255,.22);border-radius:50%;background:radial-gradient(circle,rgba(157,137,255,.35),rgba(157,137,255,.03) 68%);box-shadow:0 0 0 18px rgba(255,255,255,.035),0 0 0 38px rgba(255,255,255,.025)}
-.banner-orbit:before,.banner-orbit:after{content:"";position:absolute;inset:13px;border:1px solid rgba(255,255,255,.18);border-radius:50%}.banner-orbit:after{inset:-15px;border-style:dashed}
-.banner-orbit span{font:800 3.3rem Manrope;color:#fff;text-shadow:0 8px 24px rgba(0,0,0,.2)}
 .overview-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin:17px 0}
 .metric-card{position:relative;min-width:0;padding:18px;border:1px solid #ece9f5;border-radius:15px;background:#fff;box-shadow:0 8px 22px rgba(25,17,70,.035)}
 .metric-icon{display:grid;place-items:center;width:34px;height:34px;margin-bottom:14px;border-radius:10px;background:#eeeaff;color:#5c46c7;font-size:1rem}
@@ -130,12 +127,10 @@ footer{color:#9994aa}
  .workspace-nav>span:first-child{width:28px;height:28px;font-size:.9rem}
  .workspace-nav b{font-size:.68rem}.workspace-nav small{display:none}
  .workspace-main .topline{padding:19px;margin-bottom:13px}
- .welcome-banner{padding:23px;min-height:0}.banner-orbit{width:90px;height:90px;min-width:90px}.banner-orbit span{font-size:2rem}
  .overview-bottom{grid-template-columns:1fr}
 }
 @media(max-width:480px){
  .workspace-nav{min-width:85px;flex-direction:column;gap:4px}.workspace-nav b{font-size:.62rem}
- .welcome-banner{padding:20px}.banner-orbit{display:none}
  .overview-grid{gap:9px}.metric-card{padding:14px}.metric-card strong{font-size:1.5rem}
  .section-intro{align-items:flex-start;flex-direction:column;padding:19px}.section-intro .secondary{align-self:flex-end}
 }
