@@ -29,7 +29,46 @@ async function loadStaff(){
  if(!isAdmin)return;
  const snap=await getDocs(collection(db,"staff"));const list=$("staff-list");
  const records=snap.docs.map(d=>({uid:d.id,...d.data()}));
- list.innerHTML=records.length?records.map(s=>'<article class="staff-item"><div class="item-head"><div><strong>'+esc(s.fullName||"Staff member")+'</strong><br><small>'+esc(s.email||"")+' · '+esc(s.designation||"Counsellor")+'</small></div><span class="pill">'+(s.active?"Active":"Inactive")+'</span></div><div class="muted">UID: '+esc(s.uid)+'</div><div class="muted">Services: '+esc(servicesLabel(s.services||[]))+'</div></article>').join(""):'<div class="empty">No staff profiles created yet.</div>';
+ list.innerHTML=records.length?records.map(s=>{
+  const locked=s.role==="super_admin"||s.uid===ADMIN_UID;
+  const checked=(service)=>((s.services||[]).includes(service)?"checked":"");
+  return '<article class="staff-item" data-staff-card="'+esc(s.uid)+'">'+
+   '<div class="item-head"><div><strong>'+esc(s.fullName||"Staff member")+'</strong><br><small>'+esc(s.email||"")+' · '+esc(s.designation||"Counsellor")+'</small></div><span class="pill '+(s.active?"active":"inactive")+'">'+(s.active?"Active":"Inactive")+'</span></div>'+
+   '<div class="muted">UID: '+esc(s.uid)+'</div>'+
+   '<div class="staff-edit-grid">'+
+    '<label>Full name<input data-edit-name value="'+esc(s.fullName||"")+'" required></label>'+
+    '<label>Email<input data-edit-email type="email" value="'+esc(s.email||"")+'" required></label>'+
+    '<label>Designation<input data-edit-title value="'+esc(s.designation||"Counsellor")+'" required></label>'+
+   '</div>'+
+   '<fieldset class="staff-permissions"><legend>Permitted services</legend>'+
+    '<label class="check"><input data-edit-service="study_abroad" type="checkbox" '+checked("study_abroad")+'> Study Abroad</label>'+
+    '<label class="check"><input data-edit-service="tourism" type="checkbox" '+checked("tourism")+'> International Tourism</label>'+
+   '</fieldset>'+
+   '<div class="staff-actions"><button class="primary" type="button" data-staff-save="'+esc(s.uid)+'">Save changes</button>'+
+   (locked?'<span class="muted">Administrator profile is protected</span>':'<button class="secondary" type="button" data-staff-toggle="'+esc(s.uid)+'" data-active="'+(!!s.active)+'">'+(s.active?"Deactivate access":"Reactivate access")+'</button>')+
+   '</div><p class="message" data-staff-message></p></article>';
+ }).join(""):'<div class="empty">No staff profiles created yet.</div>';
+ list.querySelectorAll("[data-staff-save]").forEach(btn=>btn.addEventListener("click",async()=>{
+  const card=btn.closest("[data-staff-card]");const services=[...card.querySelectorAll("[data-edit-service]:checked")].map(x=>x.dataset.editService);
+  const note=card.querySelector("[data-staff-message]");
+  if(!services.length){note.textContent="Select at least one service permission.";return;}
+  const fullName=card.querySelector("[data-edit-name]").value.trim();
+  const email=card.querySelector("[data-edit-email]").value.trim();
+  const designation=card.querySelector("[data-edit-title]").value.trim();
+  if(!fullName||!email||!designation){note.textContent="Complete all profile fields.";return;}
+  btn.disabled=true;
+  try{await updateDoc(doc(db,"staff",btn.dataset.staffSave),{fullName,email,designation,services,updatedAt:serverTimestamp()});note.style.color="#23835f";note.textContent="Profile updated.";await loadStaff();}
+  catch(e){note.textContent="Could not update profile: "+e.message;}
+  finally{btn.disabled=false;}
+ }));
+ list.querySelectorAll("[data-staff-toggle]").forEach(btn=>btn.addEventListener("click",async()=>{
+  const uid=btn.dataset.staffToggle;const active=btn.dataset.active==="true";
+  const action=active?"deactivate":"reactivate";
+  if(!confirm("Are you sure you want to "+action+" this counsellor's staff access?"))return;
+  btn.disabled=true;
+  try{await updateDoc(doc(db,"staff",uid),{active:!active,updatedAt:serverTimestamp()});await loadStaff();}
+  catch(e){alert("Could not change staff access: "+e.message);btn.disabled=false;}
+ }));
 }
 async function loadCases(){
  const root=$("case-list");root.innerHTML='<p class="muted">Loading applications…</p>';
@@ -53,7 +92,7 @@ async function loadCases(){
  }catch(e){console.error(e);root.innerHTML='<div class="empty">Applications could not be loaded. Check the published Firestore rules and try again.</div>';}
 }
 $("login-form").addEventListener("submit",async e=>{e.preventDefault();$("login-button").disabled=true;message("login-message","");try{const c=await signInWithEmailAndPassword(auth,$("email").value.trim(),$("password").value);await enterWorkspace(c.user);}catch(err){message("login-message",err.message||"Sign-in failed.");if(auth.currentUser)await signOut(auth).catch(()=>{});}finally{$("login-button").disabled=false;}});
-$("staff-form").addEventListener("submit",async e=>{e.preventDefault();const services=[...document.querySelectorAll('input[name="service"]:checked')].map(x=>x.value);if(!services.length){message("staff-message","Select at least one permitted service.");return;}const uid=$("staff-uid").value.trim();if(!uid||uid===ADMIN_UID){message("staff-message","Enter the counsellor's own Firebase Authentication UID. Your administrator account is already reserved.");return;}try{await setDoc(doc(db,"staff",uid),{fullName:$("staff-name").value.trim(),email:$("staff-email").value.trim(),designation:$("staff-title").value.trim(),role:"counsellor",services,active:true,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});message("staff-message","Counsellor profile saved.",true);e.target.reset();$("staff-title").value="Study Abroad Counsellor";await loadStaff();}catch(err){message("staff-message","Could not save: "+err.message);}});
+$("staff-form").addEventListener("submit",async e=>{e.preventDefault();const services=[...document.querySelectorAll('input[name="service"]:checked')].map(x=>x.value);if(!services.length){message("staff-message","Select at least one permitted service.");return;}const uid=$("staff-uid").value.trim();if(!uid||uid===ADMIN_UID){message("staff-message","Enter the counsellor's own Firebase Authentication UID. Your administrator account is already reserved.");return;}try{const existing=await getDoc(doc(db,"staff",uid));if(existing.exists()){message("staff-message","A profile already exists for this UID. Edit it in the Authorised staff list instead; existing access was not changed.");return;}await setDoc(doc(db,"staff",uid),{fullName:$("staff-name").value.trim(),email:$("staff-email").value.trim(),designation:$("staff-title").value.trim(),role:"counsellor",services,active:true,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});message("staff-message","Counsellor profile created successfully.",true);e.target.reset();$("staff-title").value="Study Abroad Counsellor";await loadStaff();}catch(err){message("staff-message","Could not save: "+err.message);}});
 $("activate-owner").addEventListener("click",async()=>{try{await setDoc(doc(db,"staff",currentUser.uid),{fullName:"Adarsh Srivastava",email:currentUser.email||"",designation:"Co-Founder & Immigration Consultant",role:"super_admin",services:["study_abroad"],active:true,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});await enterWorkspace(currentUser);}catch(e){message("owner-message",e.message);}});
 $("refresh").addEventListener("click",loadCases);$("signout").addEventListener("click",()=>signOut(auth));
 onAuthStateChanged(auth,async user=>{if(!user)return;try{await enterWorkspace(user);}catch(e){message("login-message",e.message);}});
