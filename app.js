@@ -204,8 +204,13 @@ function applicationInput(field) {
 function renderApplicationWorkspace() {
   const root = $("application-workspace");
   if (!root) return;
+  if (applicationProfile?.serviceType === "tourism") {
+    root.innerHTML = '<div class="application-topline"><div><span class="section-kicker">INTERNATIONAL TOURISM</span><h3>Your tourism case is registered</h3><p>Your Quorista team will discuss your destination, travel dates and requirements with you. You do not need to complete the Study Abroad questionnaire.</p></div></div><div class="application-drafts"><div id="application-list" class="application-list"><p class="muted">Loading your case…</p></div></div>';
+    loadClientApplications();
+    return;
+  }
   root.innerHTML = `
-    <div class="application-topline"><div><span class="section-kicker">STUDY ABROAD</span><h3>Start an application</h3><p>Complete the sections at your own pace. You can save a draft and return later.</p></div><span class="application-private"><i></i> Private until submitted</span></div>
+    <div class="application-topline"><div><span class="section-kicker">STUDY ABROAD</span><h3>Optional requirements questionnaire</h3><p>Share these details if you wish. Your case already exists and your counsellor can contact you even if you skip this questionnaire.</p></div><span class="application-private"><i></i> Private until submitted</span></div>
     <div class="application-layout">
       <aside class="application-steps">${applicationSteps.map((step, index) => '<button type="button" class="application-step ' + (index === applicationStep ? 'active ' : '') + (index < applicationStep ? 'completed' : '') + '" data-app-step="' + index + '"><span class="step-number">' + (index < applicationStep ? '✓' : String(index + 1).padStart(2, "0")) + '</span><span><strong>' + step.title + '</strong><small>' + (index === 6 ? 'Final check' : 'Section ' + (index + 1)) + '</small></span></button>').join("")}</aside>
       <div class="application-form-panel">
@@ -213,10 +218,10 @@ function renderApplicationWorkspace() {
         <div class="application-step-heading"><span>STEP ${String(applicationStep + 1).padStart(2, "0")} OF 07</span><h4>${applicationSteps[applicationStep].title}</h4><p>${applicationSteps[applicationStep].subtitle}</p></div>
         <div id="application-fields" class="application-fields"></div>
         <div class="application-message" id="application-message" role="status" aria-live="polite"></div>
-        <div class="application-actions"><button type="button" class="button-secondary" id="application-back" ${applicationStep === 0 ? "disabled" : ""}>Back</button><div><button type="button" class="button-secondary" id="application-save">Save draft</button><button type="button" class="application-primary" id="application-next">${applicationStep === 6 ? "Submit application" : "Continue"} <span>→</span></button></div></div>
+        <div class="application-actions"><button type="button" class="button-secondary" id="application-back" ${applicationStep === 0 ? "disabled" : ""}>Back</button><div><button type="button" class="button-secondary" id="application-save">Save draft</button><button type="button" class="application-primary" id="application-next">${applicationStep === 6 ? "Save requirements" : "Continue"} <span>→</span></button></div></div>
       </div>
     </div>
-    <div class="application-drafts"><div><span class="section-kicker">YOUR WORKSPACE</span><h3>Saved applications</h3></div><div id="application-list" class="application-list"><p class="muted">Loading your applications…</p></div></div>`;
+    <div class="application-drafts"><div><span class="section-kicker">YOUR WORKSPACE</span><h3>Your case</h3></div><div id="application-list" class="application-list"><p class="muted">Loading your applications…</p></div></div>`;
   const fieldsRoot = $("application-fields");
   if (applicationStep === 6) {
     fieldsRoot.innerHTML = '<div class="application-review">' + applicationFields.flat().map(([name,label]) => '<div class="review-item"><span>' + label + '</span><strong>' + (applicationData[name] ? escapeApplicationHtml(applicationData[name]) : 'Not provided') + '</strong></div>').join("") + '</div><p class="application-review-note">Please review your details carefully. Once submitted, this application will be shared with your assigned Quorista counsellor and cannot be edited from this form.</p>';
@@ -301,56 +306,36 @@ function showApplicationMessage(message, isError = true) {
 }
 
 async function saveApplication(submit) {
-  if (applicationBusy) return;
-  if (!applicationUser) { showApplicationMessage("Please sign in again to continue."); return; }
-  if (submit && !applicationData.applicantFullName) { applicationStep = 0; renderApplicationWorkspace(); showApplicationMessage("Please enter the applicant's full name before submitting."); return; }
+  if (applicationBusy || !applicationUser) return;
+  if (submit && !applicationData.applicantFullName) { applicationStep = 0; renderApplicationWorkspace(); showApplicationMessage("Please enter the applicant's full name."); return; }
   applicationBusy = true;
-  const saveButton = $("application-save");
-  const submitButton = $("application-next");
+  const saveButton = $("application-save"), nextButton = $("application-next");
   if (saveButton) saveButton.disabled = true;
-  if (submitButton) submitButton.disabled = true;
+  if (nextButton) nextButton.disabled = true;
   try {
-    const payload = {
-      clientUid: applicationUser.uid,
-      applicantFullName: applicationData.applicantFullName || "",
+    const snapshot = await getDocs(query(collection(db, "applications"), where("clientUid", "==", applicationUser.uid)));
+    if (snapshot.empty) throw new Error("Your registered case could not be found. Please contact Quorista support.");
+    const existingCase = snapshot.docs[0];
+    await updateDoc(doc(db, "applications", existingCase.id), {
+      applicantFullName: applicationData.applicantFullName || applicationProfile?.fullName || "",
       applyingFor: applicationData.applyingFor || "Myself",
-      applicationType: "study_abroad",
-      assignedCounsellorUid: applicationProfile?.assignedCounsellorUid || "",
-      assignedCounsellorName: applicationProfile?.assignedCounsellorName || "",
-      assignedCounsellorDesignation: applicationProfile?.assignedCounsellorDesignation || "",
-      assignedCounsellorEmail: applicationProfile?.assignedCounsellorEmail || "",
-      status: submit ? "submitted" : "draft",
-      formVersion: 1,
       formData: applicationData,
+      questionnaireStatus: "completed",
+      questionnaireUpdatedAt: serverTimestamp(),
       updatedAt: serverTimestamp()
-    };
-    if (applicationDraftId) {
-      await updateDoc(doc(db, "applications", applicationDraftId), payload);
-    } else {
-      payload.createdAt = serverTimestamp();
-      const created = await addDoc(collection(db, "applications"), payload);
-      applicationDraftId = created.id;
-    }
-    showApplicationMessage(submit ? "Your application has been submitted successfully." : "Your draft has been saved.", false);
-    if (submit) {
-      applicationDraftId = null;
-      applicationData = {};
-      applicationStep = 0;
-      renderApplicationWorkspace();
-      showApplicationSubmittedPopup();
-    } else {
-      await loadClientApplications();
-    }
+    });
+    applicationDraftId = existingCase.id;
+    showApplicationMessage("Your optional requirements questionnaire has been saved to your existing case. No new application was created.", false);
+    await loadClientApplications();
   } catch (error) {
-    console.error("Application save failed:", error);
-    showApplicationMessage("We couldn't save this application. Please try again. If the problem continues, contact Quorista support.");
+    console.error("Requirements questionnaire save failed:", error);
+    showApplicationMessage(error.message || "We couldn't save your requirements. Please try again.");
   } finally {
     applicationBusy = false;
     if ($("application-save")) $("application-save").disabled = false;
     if ($("application-next")) $("application-next").disabled = false;
   }
 }
-
 async function loadClientApplications() {
   const list = $("application-list");
   if (!list || !applicationUser) return;
