@@ -33,7 +33,9 @@ function setMode(nextMode) {
     : "Sign in to continue your journey with Quorista Overseas.";
   $("name-field").classList.toggle("hidden", !signup);
   $("phone-field").classList.toggle("hidden", !signup);
+  $("service-field").classList.toggle("hidden", !signup);
   $("full-name").required = signup;
+  $("service-type").required = signup;
   $("phone").required = signup;
   $("full-name").value = "";
   $("phone").value = "";
@@ -410,7 +412,7 @@ function showDashboard(user, profile) {
   showPage("overview");
 }
 
-async function ensureClientProfile(user, fullName = "", phone = "") {
+async function ensureClientProfile(user, fullName = "", phone = "", serviceType = "") {
   const userRef = doc(db, "users", user.uid);
   const existing = await getDoc(userRef);
   if (existing.exists()) {
@@ -424,7 +426,9 @@ async function ensureClientProfile(user, fullName = "", phone = "") {
   const name = fullName || user.displayName || (user.email ? user.email.split("@")[0] : "Client");
   const normalizedPhone = String(phone || "").trim();
   if (!normalizedPhone) throw new Error("Please provide your phone / WhatsApp number, including country code, to create your client profile.");
+  if (!["study_abroad", "tourism"].includes(serviceType)) throw new Error("Please select either Study Abroad or International Tourism.");
   const profile = {
+    serviceType,
     fullName: name,
     email: user.email || "",
     phone: normalizedPhone,
@@ -438,8 +442,24 @@ async function ensureClientProfile(user, fullName = "", phone = "") {
     authProvider: user.providerData.map((provider) => provider.providerId)
   };
   await setDoc(userRef, profile);
+  await ensureClientCase(user, profile);
   const saved = await getDoc(userRef);
   return saved.exists() ? saved.data() : profile;
+}
+
+async function ensureClientCase(user, profile) {
+  if (!["study_abroad", "tourism"].includes(profile?.serviceType)) return null;
+  const existing = await getDocs(query(collection(db, "applications"), where("clientUid", "==", user.uid)));
+  if (!existing.empty) return existing.docs[0].id;
+  const caseRef = doc(collection(db, "applications"));
+  await setDoc(caseRef, {
+    clientUid: user.uid, applicantFullName: profile.fullName || user.displayName || "Client", applyingFor: "Myself",
+    applicationType: profile.serviceType, assignedCounsellorUid: "", assignedCounsellorName: "",
+    assignedCounsellorDesignation: "", assignedCounsellorEmail: "", status: "registered", progressStatus: "registered",
+    progressUpdate: "Your account is registered. A Quorista team member will review your details and contact you about the next steps.",
+    formVersion: 1, formData: {}, questionnaireStatus: "not_started", createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+  });
+  return caseRef.id;
 }
 
 async function loadExistingClient(user) {
@@ -448,7 +468,9 @@ async function loadExistingClient(user) {
     await signOut(auth);
     throw new Error("This account is not authorized for Client Portal access. Please use the correct portal.");
   }
-  showDashboard(user, profileSnap.data());
+  const profile = profileSnap.data();
+  if (profile.serviceType) await ensureClientCase(user, profile);
+  showDashboard(user, profile);
 }
 
 $("mode-toggle").addEventListener("click", () => setMode(mode === "login" ? "signup" : "login"));
@@ -474,11 +496,13 @@ $("auth-form").addEventListener("submit", async (event) => {
     if (mode === "signup") {
       const fullName = $("full-name").value.trim();
       const phone = $("phone").value.trim();
+      const serviceType = $("service-type").value;
       if (!fullName) throw new Error("Please enter your full name.");
+      if (!["study_abroad", "tourism"].includes(serviceType)) throw new Error("Please select Study Abroad or International Tourism.");
       if (!phone) throw new Error("Please enter your phone / WhatsApp number, including country code.");
       const credential = await createUserWithEmailAndPassword(auth, $("email").value.trim(), $("password").value);
       await updateProfile(credential.user, { displayName: fullName });
-      const profile = await ensureClientProfile(credential.user, fullName, phone);
+      const profile = await ensureClientProfile(credential.user, fullName, phone, serviceType);
       showDashboard(credential.user, profile);
     } else {
       const credential = await signInWithEmailAndPassword(auth, $("email").value.trim(), $("password").value);
@@ -511,7 +535,7 @@ $("google-button").addEventListener("click", async () => {
   $("auth-submit").disabled = true;
   setMessage("");
   try {
-    if (mode === "signup" && (!$("full-name").value.trim() || !$("phone").value.trim())) throw new Error("Enter your full name and phone / WhatsApp number above before continuing with Google.");
+    if (mode === "signup" && (!$("full-name").value.trim() || !$("phone").value.trim() || !["study_abroad", "tourism"].includes($("service-type").value))) throw new Error("Enter your name and phone number, then select one service before continuing with Google.");
     const credential = await signInWithPopup(auth, googleProvider);
     const existingProfile = await getDoc(doc(db, "users", credential.user.uid));
     if (existingProfile.exists()) {
@@ -520,7 +544,7 @@ $("google-button").addEventListener("click", async () => {
       showDashboard(credential.user, profile);
     } else if (mode === "signup") {
       const fullName = $("full-name").value.trim();
-      const profile = await ensureClientProfile(credential.user, fullName, $("phone").value.trim());
+      const profile = await ensureClientProfile(credential.user, fullName, $("phone").value.trim(), $("service-type").value);
       showDashboard(credential.user, profile);
     } else {
       await signOut(auth);
