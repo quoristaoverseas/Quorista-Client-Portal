@@ -129,17 +129,19 @@ async function loadClientDirectory(){
      assignedAt:selected?serverTimestamp():null,
      updatedAt:serverTimestamp()
     };
-    await updateDoc(doc(db,"users",uid),assignment);
     const clientApps=await getDocs(query(collection(db,"applications"),where("clientUid","==",uid)));
-    for(const application of clientApps.docs){
-     await updateDoc(doc(db,"applications",application.id),{
+    const batch=writeBatch(db);
+    batch.update(doc(db,"users",uid),assignment);
+    clientApps.docs.forEach(application=>{
+     batch.update(doc(db,"applications",application.id),{
       assignedCounsellorUid:assignment.assignedCounsellorUid,
       assignedCounsellorName:assignment.assignedCounsellorName,
       assignedCounsellorDesignation:assignment.assignedCounsellorDesignation,
       assignedCounsellorEmail:assignment.assignedCounsellorEmail,
       updatedAt:serverTimestamp()
      });
-    }
+    });
+    await batch.commit();
     await loadClientDirectory();
    }catch(error){alert("Could not update client assignment: "+error.message);button.disabled=false;button.textContent="Save assignment";}
   }));
