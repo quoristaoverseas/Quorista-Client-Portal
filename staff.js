@@ -99,7 +99,7 @@ async function loadClientDirectory(){
   let activeStaff=[];
   if(isAdmin){
    const staffSnap=await getDocs(collection(db,"staff"));
-   activeStaff=staffSnap.docs.map(d=>({uid:d.id,...d.data()})).filter(s=>s.active&&s.role!=="super_admin");
+   activeStaff=staffSnap.docs.map(d=>({uid:d.id,...d.data()})).filter(s=>s.active);
   }
   if(!clients.length){
    root.innerHTML='<div class="empty">No registered client accounts yet. New sign-ups will appear here automatically.</div>';
