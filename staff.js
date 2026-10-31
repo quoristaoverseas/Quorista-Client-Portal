@@ -8,6 +8,7 @@ let currentUser=null,staffProfile=null,isAdmin=false;
 $("year").textContent=new Date().getFullYear();
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function message(id,text,ok=false){$(id).textContent=text;$(id).style.color=ok?"#23835f":"#a33228";}
+function showStaffToast(text){let node=$("staff-save-toast");if(!node){node=document.createElement("div");node.id="staff-save-toast";node.className="staff-save-toast";node.setAttribute("role","status");document.body.appendChild(node);}node.textContent=text;node.classList.add("visible");clearTimeout(node._hideTimer);node._hideTimer=setTimeout(()=>node.classList.remove("visible"),3200);}
 function servicesLabel(a=[]){return a.map(x=>x==="study_abroad"?"Study Abroad":"International Tourism").join(" · ")||"No service permission";}
 async function removeLegacyCounsellorEmails(){
  const [usersSnap,applicationsSnap]=await Promise.all([getDocs(collection(db,"users")),getDocs(collection(db,"applications"))]);
@@ -242,7 +243,7 @@ async function loadCases(){
     const statusOptions=(a.applicationType==="tourism"?tourismStatuses:studyStatuses).map(v=>'<option value="'+v+'" '+((a.progressStatus||"registered")===v?"selected":"")+'>'+v.replaceAll("_"," ")+'</option>').join("");
     const privateNotes=(notesByApplication.get(a.id)||[]).sort((x,y)=>{const xv=x.createdAt?.toMillis?x.createdAt.toMillis():0,yv=y.createdAt?.toMillis?y.createdAt.toMillis():0;return yv-xv;});
     const privateNotesMarkup=privateNotes.length?'<details class="private-notes"><summary>Private counsellor notes ('+privateNotes.length+')</summary>'+privateNotes.map(n=>'<div class="private-note-entry"><p>'+esc(n.note)+'</p><small>'+esc(formatCaseDate(n.createdAt))+'</small></div>').join("")+'</details>':'<p class="private-notes-empty">No internal notes recorded yet.</p>';
-    return '<article class="case-item"><div class="item-head"><div><strong>'+esc(a.applicantFullName||"Study Abroad applicant")+'</strong><br><small>'+esc(a.applyingFor||"Myself")+' · '+esc(a.applicationType==="study_abroad"?"Study Abroad":a.applicationType)+'</small></div><span class="pill">'+esc((a.progressStatus||"registered").replaceAll("_"," "))+'</span></div><div class="case-meta"><span class="muted">Submitted: '+esc(formatCaseDate(a.createdAt))+'</span><span class="muted">Counsellor: '+esc(a.assignedCounsellorName||"Not assigned")+'</span></div>'+caseDetailsMarkup(a)+privateNotesMarkup+'<div class="case-controls">'+assignment+
+    return '<article class="case-item"><div class="item-head"><div><strong>'+esc(a.applicantFullName||"Study Abroad applicant")+'</strong><br><small>'+esc(a.applyingFor||"Myself")+' · '+esc(a.applicationType==="study_abroad"?"Study Abroad":a.applicationType)+'</small></div><span class="pill">'+esc((a.progressStatus||"registered").replaceAll("_"," "))+'</span></div><div class="case-meta"><span class="muted">Submitted: '+esc(formatCaseDate(a.createdAt))+'</span><span class="muted">Counsellor: '+esc(a.assignedCounsellorName||"Not assigned")+'</span></div>'+caseDetailsMarkup(a)+privateNotesMarkup+'<details class="case-update-panel"><summary>Update case progress <span>Open to change the client-visible stage, share an update or schedule a follow-up</span></summary><div class="case-controls">'+assignment+
     '<label>Progress status<select data-status="'+esc(a.id)+'">'+statusOptions+'</select></label>'+
     '<div class="case-university-fields '+((a.progressStatus||"").includes("university_application")?"":"hidden")+'" data-university-fields="'+esc(a.id)+'"><strong>University application details</strong>'+
     '<label>University name<input data-university-name="'+esc(a.id)+'" value="'+esc(a.universityDetails?.universityName||"")+'" placeholder="University name"></label>'+
@@ -252,7 +253,7 @@ async function loadCases(){
     '<label>Client-visible progress update<textarea data-note="'+esc(a.id)+'" placeholder="A suggested update will be generated automatically if left blank">'+esc(a.progressUpdate||"")+'</textarea></label>'+
     '<label>Private internal note<textarea data-internal-note="'+esc(a.id)+'" placeholder="Only authorised staff can read this note"></textarea></label>'+
     '<div class="case-followup-fields"><label>Next follow-up date<input type="date" data-followup-date="'+esc(a.id)+'"></label><label>Follow-up action<input data-followup-action="'+esc(a.id)+'" placeholder="Call client / email university / review documents"></label></div>'+
-    '<button class="primary" data-save="'+esc(a.id)+'">Save case update</button></div></article>';
+    '<button class="primary case-save-button" data-save="'+esc(a.id)+'">Save case update</button></div></details></article>';
    }).join("");
    root.querySelectorAll("[data-assign]").forEach(el=>el.addEventListener("change",async()=>{
     el.disabled=true;
@@ -331,11 +332,12 @@ async function loadCases(){
      const patch={progressStatus:status,progressUpdate:clientMessage,lastProgressUpdatedAt:serverTimestamp(),updatedAt:serverTimestamp()};
      if(status==="university_application")patch.universityDetails=universityDetails;
      batch.update(doc(db,"applications",id),patch);
-     batch.set(doc(collection(db,"status_updates")),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,status,clientMessage,createdByUid:currentUser.uid,createdAt:serverTimestamp()});
+     batch.set(doc(collection(db,"status_updates")),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,status,clientMessage,universityDetails:status==="university_application"?universityDetails:null,createdByUid:currentUser.uid,createdAt:serverTimestamp()});
      if(internal)batch.set(doc(collection(db,"internal_notes")),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,assignedCounsellorUid:record.assignedCounsellorUid||currentUser.uid,note:internal,createdByUid:currentUser.uid,createdAt:serverTimestamp()});
      if(followDate&&followAction)batch.set(doc(collection(db,"follow_ups")),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,assignedCounsellorUid:record.assignedCounsellorUid||currentUser.uid,followUpDate:followDate,action:followAction,status:"open",createdByUid:currentUser.uid,createdAt:serverTimestamp()});
      await batch.commit();
      await loadCases();
+     showStaffToast("Case update saved successfully. The update panel has been closed.");
     }catch(e){alert("Could not save update: "+e.message);btn.disabled=false;btn.textContent="Save case update";}
    }));
   };
