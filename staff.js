@@ -178,7 +178,7 @@ async function loadCases(){
     el.disabled=true;
     try{
      const uid=el.value||null,chosen=staff.find(person=>person.uid===uid);
-     await updateDoc(doc(db,"applications",el.dataset.assign),{assignedCounsellorUid:uid,assignedCounsellorName:chosen?chosen.fullName:"",assignedCounsellorDesignation:chosen?chosen.designation:"",assignedAt:serverTimestamp(),updatedAt:serverTimestamp()});
+     await updateDoc(doc(db,"applications",el.dataset.assign),{assignedCounsellorUid:uid,assignedCounsellorName:chosen?chosen.fullName:"",assignedCounsellorDesignation:chosen?chosen.designation:"",assignedCounsellorEmail:chosen?chosen.email:"",assignedAt:serverTimestamp(),updatedAt:serverTimestamp()});
      await loadCases();
     }catch(e){alert("Could not assign this application: "+e.message);el.disabled=false;}
    }));
