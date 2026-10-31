@@ -246,8 +246,23 @@ async function loadCases(){
    root.querySelectorAll("[data-assign]").forEach(el=>el.addEventListener("change",async()=>{
     el.disabled=true;
     try{
-     const uid=el.value||null,chosen=staff.find(person=>person.uid===uid);
-     await updateDoc(doc(db,"applications",el.dataset.assign),{assignedCounsellorUid:uid,assignedCounsellorName:chosen?chosen.fullName:"",assignedCounsellorDesignation:chosen?chosen.designation:"",assignedCounsellorEmail:chosen?chosen.email:"",assignedAt:serverTimestamp(),updatedAt:serverTimestamp()});
+     const applicationId=el.dataset.assign;
+     const uid=el.value||"";
+     const chosen=staff.find(person=>person.uid===uid);
+     const application=records.find(item=>item.id===applicationId);
+     if(!application?.clientUid)throw new Error("The application is missing its client account link. No changes were saved.");
+     const assignment={
+      assignedCounsellorUid:uid,
+      assignedCounsellorName:chosen?chosen.fullName||"Counsellor":"",
+      assignedCounsellorDesignation:chosen?chosen.designation||"Counsellor":"",
+      assignedCounsellorEmail:chosen?chosen.email||"":"",
+      assignedAt:chosen?serverTimestamp():null,
+      updatedAt:serverTimestamp()
+     };
+     const batch=writeBatch(db);
+     batch.update(doc(db,"applications",applicationId),assignment);
+     batch.set(doc(db,"users",application.clientUid),assignment,{merge:true});
+     await batch.commit();
      await loadCases();
     }catch(e){alert("Could not assign this application: "+e.message);el.disabled=false;}
    }));
