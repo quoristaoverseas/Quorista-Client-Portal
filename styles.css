@@ -57,3 +57,15 @@ body.dashboard-active .hero{align-items:flex-start;min-height:100vh;padding:112p
 .application-submitted-label:before{content:"";margin-right:6px}
 @media(max-width:900px){.application-layout{grid-template-columns:1fr}.application-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.application-step{padding:9px}.application-form-panel{padding:19px}}
 @media(max-width:600px){.application-topline{display:block}.application-private{margin-top:12px}.application-steps{grid-template-columns:1fr 1fr}.application-step{gap:8px}.application-step strong{font-size:.68rem}.application-step small{font-size:.6rem}.application-fields-grid,.application-review{grid-template-columns:1fr}.application-field-wide{grid-column:auto}.application-form-panel{padding:16px}.application-actions{align-items:stretch;flex-direction:column-reverse}.application-actions>div{display:grid;grid-template-columns:1fr 1fr}.application-actions>button{width:100%}.application-list-item{align-items:flex-start;flex-direction:column}}
+
+
+/* Application submission confirmation */
+.application-success-overlay{position:fixed;inset:0;z-index:10000;background:rgba(19,15,43,.62);backdrop-filter:blur(5px);display:grid;place-items:center;padding:20px;animation:applicationFadeIn .2s ease}
+.application-success-card{width:min(100%,480px);background:#fff;border:1px solid #eeeaf6;border-radius:22px;padding:36px 32px 30px;text-align:center;box-shadow:0 24px 80px rgba(12,8,38,.25);animation:applicationPopIn .25s ease}
+.application-success-icon{width:58px;height:58px;margin:0 auto 19px;border-radius:50%;display:grid;place-items:center;background:#e8f6ef;color:#24825e;font-size:1.8rem;font-weight:800}
+.application-success-card h3{font:800 1.45rem/1.3 Manrope,sans-serif;color:#211d3d;margin:10px 0}
+.application-success-card p{font-size:.9rem;line-height:1.7;color:#716b83;margin:12px 0 24px}
+.application-success-card button{border:0;border-radius:10px;background:#ffb020;color:#211a31;padding:13px 20px;font:800 .82rem 'DM Sans',sans-serif;cursor:pointer}
+@keyframes applicationFadeIn{from{opacity:0}to{opacity:1}}
+@keyframes applicationPopIn{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:600px){.application-success-card{padding:30px 22px 24px}.application-success-card h3{font-size:1.25rem}}
