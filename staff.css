@@ -139,3 +139,12 @@ footer{color:#9994aa}
  .overview-grid{gap:9px}.metric-card{padding:14px}.metric-card strong{font-size:1.5rem}
  .section-intro{align-items:flex-start;flex-direction:column;padding:19px}.section-intro .secondary{align-self:flex-end}
 }
+
+/* Structured case workflow controls */
+.case-university-fields,.case-followup-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:15px;border:1px solid #e9e5f3;border-radius:12px;background:#faf9fd}
+.case-university-fields>strong{grid-column:1/-1;color:#241b56;font:800 .78rem Manrope;letter-spacing:.04em}
+.case-university-fields label,.case-followup-fields label{display:grid;gap:6px;font-size:.72rem;font-weight:700;color:#514b6b}
+.case-university-fields input,.case-followup-fields input{width:100%;min-width:0;border:1px solid #ded9eb;border-radius:8px;padding:10px 11px;font:500 .8rem 'DM Sans',sans-serif}
+.case-controls>label{display:grid;gap:6px}
+.case-controls textarea{min-height:86px;resize:vertical}
+@media(max-width:620px){.case-university-fields,.case-followup-fields{grid-template-columns:1fr}}
