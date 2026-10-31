@@ -36,6 +36,7 @@ function setMode(nextMode) {
   $("service-field").classList.toggle("hidden", !signup);
   $("full-name").required = signup;
   $("service-type").required = signup;
+  if (signup) $("service-type").value = "";
   $("phone").required = signup;
   $("full-name").value = "";
   $("phone").value = "";
@@ -527,6 +528,7 @@ $("google-button").addEventListener("click", async () => {
     if (existingProfile.exists()) {
       const profile = existingProfile.data();
       if (profile.role !== "client" || profile.accountStatus !== "active") throw new Error("This account is not authorised for Client Portal access.");
+      if (profile.serviceType) await ensureClientCase(credential.user, profile);
       showDashboard(credential.user, profile);
     } else if (mode === "signup") {
       const fullName = $("full-name").value.trim();
