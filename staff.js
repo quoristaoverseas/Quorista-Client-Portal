@@ -31,9 +31,10 @@ async function loadCases(){
  const root=$("case-list");root.innerHTML='<p class="muted">Loading applications…</p>';
  try{
   let snap;
-  if(isAdmin){snap=await getDocs(collection(db,"applications"));}
-  else{snap=await getDocs(query(collection(db,"applications"),where("assignedCounsellorUid","==",currentUser.uid)));}
-  const records=snap.docs.map(d=>({id:d.id,...d.data()})).filter(a=>a.status==="submitted"&&(isAdmin||((staffProfile?.services||[]).includes(a.applicationType))));
+  let docs=[];
+  if(isAdmin){const all=await getDocs(collection(db,"applications"));docs=all.docs;}
+  else{const permitted=staffProfile?.services||[];const batches=await Promise.all(permitted.map(service=>getDocs(query(collection(db,"applications"),where("assignedCounsellorUid","==",currentUser.uid),where("applicationType","==",service)))));docs=batches.flatMap(batch=>batch.docs);}
+  const records=docs.map(d=>({id:d.id,...d.data()})).filter(a=>a.status==="submitted");
   if(!records.length){root.innerHTML='<div class="empty">No submitted applications are currently assigned to this account.</div>';return;}
   const staffSnap=isAdmin?await getDocs(collection(db,"staff")):null;
   const staff=staffSnap?staffSnap.docs.map(d=>({uid:d.id,...d.data()})).filter(s=>s.active):[];
