@@ -13,6 +13,10 @@ async function enterWorkspace(user){
  currentUser=user;isAdmin=user.uid===ADMIN_UID;
  const snap=await getDoc(doc(db,"staff",user.uid));
  staffProfile=snap.exists()?snap.data():null;
+ if(isAdmin&&staffProfile&&staffProfile.fullName!=="Adarsh Srivastava"){
+  await updateDoc(doc(db,"staff",user.uid),{fullName:"Adarsh Srivastava",updatedAt:serverTimestamp()});
+  staffProfile={...staffProfile,fullName:"Adarsh Srivastava"};
+ }
  if(!isAdmin&&(!staffProfile||staffProfile.active!==true)){await signOut(auth);throw new Error("This account has not been authorised for staff access. Contact your Quorista administrator.");}
  $("login-panel").classList.add("hidden");$("workspace").classList.remove("hidden");
  $("welcome").textContent="Welcome, "+(staffProfile?.fullName||user.displayName||"Administrator");
@@ -50,6 +54,6 @@ async function loadCases(){
 }
 $("login-form").addEventListener("submit",async e=>{e.preventDefault();$("login-button").disabled=true;message("login-message","");try{const c=await signInWithEmailAndPassword(auth,$("email").value.trim(),$("password").value);await enterWorkspace(c.user);}catch(err){message("login-message",err.message||"Sign-in failed.");if(auth.currentUser)await signOut(auth).catch(()=>{});}finally{$("login-button").disabled=false;}});
 $("staff-form").addEventListener("submit",async e=>{e.preventDefault();const services=[...document.querySelectorAll('input[name="service"]:checked')].map(x=>x.value);if(!services.length){message("staff-message","Select at least one permitted service.");return;}const uid=$("staff-uid").value.trim();if(!uid||uid===ADMIN_UID){message("staff-message","Enter the counsellor's own Firebase Authentication UID. Your administrator account is already reserved.");return;}try{await setDoc(doc(db,"staff",uid),{fullName:$("staff-name").value.trim(),email:$("staff-email").value.trim(),designation:$("staff-title").value.trim(),role:"counsellor",services,active:true,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});message("staff-message","Counsellor profile saved.",true);e.target.reset();$("staff-title").value="Study Abroad Counsellor";await loadStaff();}catch(err){message("staff-message","Could not save: "+err.message);}});
-$("activate-owner").addEventListener("click",async()=>{try{await setDoc(doc(db,"staff",currentUser.uid),{fullName:currentUser.displayName||"Quorista Administrator",email:currentUser.email||"",designation:"Co-Founder & Immigration Consultant",role:"super_admin",services:["study_abroad"],active:true,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});await enterWorkspace(currentUser);}catch(e){message("owner-message",e.message);}});
+$("activate-owner").addEventListener("click",async()=>{try{await setDoc(doc(db,"staff",currentUser.uid),{fullName:"Adarsh Srivastava",email:currentUser.email||"",designation:"Co-Founder & Immigration Consultant",role:"super_admin",services:["study_abroad"],active:true,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});await enterWorkspace(currentUser);}catch(e){message("owner-message",e.message);}});
 $("refresh").addEventListener("click",loadCases);$("signout").addEventListener("click",()=>signOut(auth));
 onAuthStateChanged(auth,async user=>{if(!user)return;try{await enterWorkspace(user);}catch(e){message("login-message",e.message);}});
