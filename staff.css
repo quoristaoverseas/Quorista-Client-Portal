@@ -209,3 +209,30 @@ input:focus,select:focus,textarea:focus{outline:0!important;border-color:#5b3df5
 button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid rgba(255,176,32,.6);outline-offset:2px}
 footer{color:#5d5a7e}
 @media(hover:hover){.metric-card,.overview-info,.client-directory-card,.case-item,.staff-item{transition:transform .2s ease,box-shadow .2s ease}.metric-card:hover,.overview-info:hover,.client-directory-card:hover{transform:translateY(-2px);box-shadow:0 18px 38px rgba(16,6,92,.09)}}
+
+
+/* Branded staff header and refined workspace footer */
+header{gap:18px}
+.brand{display:flex;align-items:center;gap:13px;min-width:0}
+.brand img{display:block;width:154px;height:43px;object-fit:contain;filter:brightness(0) invert(1)}
+.brand span{padding-left:13px;border-left:1px solid rgba(255,255,255,.25);font-size:.68rem;letter-spacing:.12em;white-space:nowrap}
+.header-label{margin-left:auto;text-align:right}
+footer{display:flex;align-items:center;justify-content:center;gap:13px;flex-wrap:wrap;margin:0 auto;max-width:1440px;border-top:1px solid rgba(16,6,92,.1);padding:22px 4vw 28px;color:#77738f}
+footer a{color:#10065c;font:800 .65rem Manrope;letter-spacing:.13em;text-decoration:none}
+footer a:hover{color:#5b3df5}
+footer span{font-size:.68rem}
+.workspace-sidebar{border:1px solid rgba(201,191,255,.12)}
+.workspace-nav{transition:background .2s ease,transform .2s ease,color .2s ease}
+.workspace-nav:active{transform:scale(.985)}
+.panel,.metric-card,.overview-info,.client-directory-card,.case-item,.staff-item{border-radius:16px}
+.case-toolbar{background:linear-gradient(110deg,#fff,#fbfaff);border-color:rgba(16,6,92,.1)}
+.case-detail[open] summary{color:#10065c}
+.followup-item{border-color:rgba(16,6,92,.1);box-shadow:0 8px 22px rgba(16,6,92,.035)}
+@media(max-width:680px){
+ header{padding:0 18px;gap:10px}
+ .brand{gap:8px}
+ .brand img{width:120px;height:36px}
+ .brand span{font-size:.54rem;padding-left:8px}
+ .header-label{font-size:.48rem;letter-spacing:.1em}
+ footer{gap:6px;flex-direction:column}
+}
