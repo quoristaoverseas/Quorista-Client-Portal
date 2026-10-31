@@ -212,18 +212,16 @@ async function loadCases(){
       if(detail)clientMessage+=" Details: "+detail+".";
       if(!universityDetails.universityName||!universityDetails.country||!universityDetails.programLevel||!universityDetails.intake)throw new Error("Complete university name, country, program level and intake before saving this stage.");
      }
+     const followDate=root.querySelector('[data-followup-date="'+id+'"]').value;
+     const followAction=root.querySelector('[data-followup-action="'+id+'"]').value.trim();
+     if((followDate&&!followAction)||(!followDate&&followAction))throw new Error("Enter both a follow-up date and action, or leave both blank.");
+     const internal=root.querySelector('[data-internal-note="'+id+'"]').value.trim();
      const patch={progressStatus:status,progressUpdate:clientMessage,lastProgressUpdatedAt:serverTimestamp(),updatedAt:serverTimestamp()};
      if(status==="university_application")patch.universityDetails=universityDetails;
      await updateDoc(doc(db,"applications",id),patch);
      await addDoc(collection(db,"status_updates"),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,status,clientMessage,createdByUid:currentUser.uid,createdAt:serverTimestamp()});
-     const internal=root.querySelector('[data-internal-note="'+id+'"]').value.trim();
      if(internal)await addDoc(collection(db,"internal_notes"),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,note:internal,createdByUid:currentUser.uid,createdAt:serverTimestamp()});
-     const followDate=root.querySelector('[data-followup-date="'+id+'"]').value;
-     const followAction=root.querySelector('[data-followup-action="'+id+'"]').value.trim();
-     if(followDate||followAction){
-      if(!followDate||!followAction)throw new Error("Enter both a follow-up date and action, or leave both blank.");
-      await addDoc(collection(db,"follow_ups"),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,assignedCounsellorUid:record.assignedCounsellorUid||currentUser.uid,followUpDate:followDate,action:followAction,status:"open",createdByUid:currentUser.uid,createdAt:serverTimestamp()});
-     }
+     if(followDate&&followAction)await addDoc(collection(db,"follow_ups"),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,assignedCounsellorUid:record.assignedCounsellorUid||currentUser.uid,followUpDate:followDate,action:followAction,status:"open",createdByUid:currentUser.uid,createdAt:serverTimestamp()});
      await loadCases();
     }catch(e){alert("Could not save update: "+e.message);btn.disabled=false;btn.textContent="Save case update";}
    }));
