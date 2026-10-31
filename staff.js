@@ -1,6 +1,6 @@
 import {initializeApp} from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
 import {getAuth,signInWithEmailAndPassword,onAuthStateChanged,signOut} from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
-import {getFirestore,doc,getDoc,setDoc,collection,getDocs,query,where,updateDoc,writeBatch,serverTimestamp} from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+import {getFirestore,doc,getDoc,setDoc,collection,getDocs,query,where,updateDoc,writeBatch,serverTimestamp,deleteField} from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 import {firebaseConfig} from "./firebase-config.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),$=id=>document.getElementById(id);
 const ADMIN_UID="oqgmvKDsJQc7WdDcjOVi5YIohAj1";
@@ -9,6 +9,19 @@ $("year").textContent=new Date().getFullYear();
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function message(id,text,ok=false){$(id).textContent=text;$(id).style.color=ok?"#23835f":"#a33228";}
 function servicesLabel(a=[]){return a.map(x=>x==="study_abroad"?"Study Abroad":"International Tourism").join(" · ")||"No service permission";}
+async function removeLegacyCounsellorEmails(){
+ const [usersSnap,applicationsSnap]=await Promise.all([getDocs(collection(db,"users")),getDocs(collection(db,"applications"))]);
+ const targets=[
+  ...usersSnap.docs.filter(d=>Object.prototype.hasOwnProperty.call(d.data(),"assignedCounsellorEmail")).map(d=>doc(db,"users",d.id)),
+  ...applicationsSnap.docs.filter(d=>Object.prototype.hasOwnProperty.call(d.data(),"assignedCounsellorEmail")).map(d=>doc(db,"applications",d.id))
+ ];
+ for(let start=0;start<targets.length;start+=450){
+  const batch=writeBatch(db);
+  targets.slice(start,start+450).forEach(ref=>batch.update(ref,{assignedCounsellorEmail:deleteField()}));
+  await batch.commit();
+ }
+}
+
 function showWorkspaceView(view){
  const allowed=["overview","clients","cases","followups","team"];
  const selected=allowed.includes(view)?view:"overview";
@@ -19,7 +32,7 @@ document.querySelectorAll("[data-view]").forEach(button=>button.addEventListener
 document.querySelectorAll("[data-go]").forEach(button=>button.addEventListener("click",()=>showWorkspaceView(button.dataset.go)));
 
 async function enterWorkspace(user){
- currentUser=user;isAdmin=user.uid===ADMIN_UID;
+ currentUser=user;isAdmin=user.uid===ADMIN_UID;if(isAdmin)await removeLegacyCounsellorEmails();
  const snap=await getDoc(doc(db,"staff",user.uid));
  staffProfile=snap.exists()?snap.data():null;
  if(isAdmin&&staffProfile&&staffProfile.fullName!=="Adarsh Srivastava"){
@@ -125,7 +138,6 @@ async function loadClientDirectory(){
      assignedCounsellorUid:selected?selected.uid:"",
      assignedCounsellorName:selected?selected.fullName||"Counsellor":"",
      assignedCounsellorDesignation:selected?selected.designation||"Counsellor":"",
-     assignedCounsellorEmail:selected?selected.email||"":"",
      assignedAt:selected?serverTimestamp():null,
      updatedAt:serverTimestamp()
     };
@@ -137,7 +149,6 @@ async function loadClientDirectory(){
       assignedCounsellorUid:assignment.assignedCounsellorUid,
       assignedCounsellorName:assignment.assignedCounsellorName,
       assignedCounsellorDesignation:assignment.assignedCounsellorDesignation,
-      assignedCounsellorEmail:assignment.assignedCounsellorEmail,
       updatedAt:serverTimestamp()
      });
     });
@@ -255,7 +266,6 @@ async function loadCases(){
       assignedCounsellorUid:uid,
       assignedCounsellorName:chosen?chosen.fullName||"Counsellor":"",
       assignedCounsellorDesignation:chosen?chosen.designation||"Counsellor":"",
-      assignedCounsellorEmail:chosen?chosen.email||"":"",
       assignedAt:chosen?serverTimestamp():null,
       updatedAt:serverTimestamp()
      };
