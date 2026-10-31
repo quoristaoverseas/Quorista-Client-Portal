@@ -235,6 +235,36 @@ function validateApplicationStep() {
   return true;
 }
 
+function showApplicationSubmittedPopup() {
+  const existing = document.getElementById("application-success-modal");
+  if (existing) existing.remove();
+  const modal = document.createElement("div");
+  modal.id = "application-success-modal";
+  modal.className = "application-success-overlay";
+  modal.setAttribute("role", "dialog");
+  modal.setAttribute("aria-modal", "true");
+  modal.setAttribute("aria-labelledby", "application-success-title");
+  modal.innerHTML = `
+    <div class="application-success-card">
+      <div class="application-success-icon" aria-hidden="true">✓</div>
+      <span class="section-kicker">APPLICATION SUBMITTED</span>
+      <h3 id="application-success-title">Thank you for submitting your application!</h3>
+      <p>Your application has been received successfully. Your Quorista counsellor will contact you soon to discuss the next steps.</p>
+      <button type="button" id="application-success-close">Continue to my dashboard</button>
+    </div>`;
+  document.body.appendChild(modal);
+  const close = () => modal.remove();
+  document.getElementById("application-success-close").addEventListener("click", close);
+  modal.addEventListener("click", event => { if (event.target === modal) close(); });
+  document.addEventListener("keydown", function onEscape(event) {
+    if (event.key === "Escape" && document.getElementById("application-success-modal")) {
+      close();
+      document.removeEventListener("keydown", onEscape);
+    }
+  });
+  document.getElementById("application-success-close").focus();
+}
+
 function showApplicationMessage(message, isError = true) {
   const node = $("application-message");
   if (node) {
@@ -276,6 +306,7 @@ async function saveApplication(submit) {
       applicationData = {};
       applicationStep = 0;
       renderApplicationWorkspace();
+      showApplicationSubmittedPopup();
     } else {
       await loadClientApplications();
     }
