@@ -159,3 +159,18 @@ footer{color:#9994aa}
 .private-note-entry p{margin:0 0 5px;color:#514b68;font-size:.75rem;line-height:1.55;white-space:pre-wrap}
 .private-note-entry small,.private-notes-empty{color:#8b849c;font-size:.66rem}
 .private-notes-empty{margin:10px 0}
+
+/* Client directory and direct contact details */
+.client-directory-card{padding:19px;border:1px solid #ece9f4;border-radius:15px;background:#fff;box-shadow:0 5px 18px rgba(25,17,70,.035)}
+.client-directory-card .item-head{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.client-directory-card .item-head strong{font-size:.94rem;color:#100943}
+.client-directory-card .item-head small{color:#85809b;font-size:.68rem}
+.client-directory-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px;margin:15px 0}
+.client-directory-meta>div{display:grid;gap:4px;min-width:0}
+.client-directory-meta span{font-size:.6rem;font-weight:800;letter-spacing:.09em;color:#85809b}
+.client-directory-meta strong,.client-directory-meta a{font-size:.76rem;color:#302b52;overflow-wrap:anywhere}
+.client-directory-meta a{color:#5e4bc0;text-decoration:underline;text-underline-offset:2px}
+.client-assign-control{display:flex;align-items:flex-end;gap:10px;padding-top:13px;border-top:1px solid #f0edf6}
+.client-assign-control label{display:grid;gap:6px;flex:1}
+.client-assign-control select{width:100%;min-height:42px;padding:9px 11px}
+@media(max-width:620px){.client-directory-meta{grid-template-columns:1fr}.client-assign-control{align-items:stretch;flex-direction:column}}
