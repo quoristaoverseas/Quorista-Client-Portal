@@ -28,13 +28,13 @@ service cloud.firestore {
   }
   match /status_updates/{updateId}{
    function linkedApplication(){return get(/databases/$(database)/documents/applications/$(resource.data.applicationId)).data;}
-   allow create: if isSuperAdmin() || (signedIn() && request.resource.data.createdByUid==request.auth.uid && request.resource.data.clientUid==linkedApplication().clientUid && assignedToMe(linkedApplication()));
+   allow create: if isSuperAdmin() || (signedIn() && request.resource.data.createdByUid==request.auth.uid && request.resource.data.clientUid==get(/databases/$(database)/documents/applications/$(request.resource.data.applicationId)).data.clientUid && assignedToMe(get(/databases/$(database)/documents/applications/$(request.resource.data.applicationId)).data));
    allow read: if isSuperAdmin() || (signedIn() && resource.data.clientUid==request.auth.uid) || (signedIn() && assignedToMe(linkedApplication()));
    allow update,delete: if isSuperAdmin();
   }
   match /internal_notes/{noteId}{
    function linkedApplication(){return get(/databases/$(database)/documents/applications/$(resource.data.applicationId)).data;}
-   allow create: if isSuperAdmin() || (signedIn() && request.resource.data.createdByUid==request.auth.uid && assignedToMe(linkedApplication()));
+   allow create: if isSuperAdmin() || (signedIn() && request.resource.data.createdByUid==request.auth.uid && assignedToMe(get(/databases/$(database)/documents/applications/$(request.resource.data.applicationId)).data));
    allow read: if isSuperAdmin() || (signedIn() && assignedToMe(linkedApplication()));
    allow update,delete: if isSuperAdmin();
   }
