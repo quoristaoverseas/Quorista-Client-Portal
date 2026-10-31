@@ -259,8 +259,11 @@ async function loadCases(){
       assignedAt:chosen?serverTimestamp():null,
       updatedAt:serverTimestamp()
      };
+     const clientApplications=await getDocs(query(collection(db,"applications"),where("clientUid","==",application.clientUid)));
      const batch=writeBatch(db);
-     batch.update(doc(db,"applications",applicationId),assignment);
+     clientApplications.docs.forEach(applicationDoc=>{
+      batch.update(doc(db,"applications",applicationDoc.id),assignment);
+     });
      batch.set(doc(db,"users",application.clientUid),assignment,{merge:true});
      await batch.commit();
      await loadCases();
