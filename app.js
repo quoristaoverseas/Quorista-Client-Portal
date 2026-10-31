@@ -1,8 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
 import {
   getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut,
-  updateProfile
+  onAuthStateChanged, signOut, updateProfile
 } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, serverTimestamp, collection, query, where, getDocs, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
@@ -10,8 +9,6 @@ import { firebaseConfig } from "./firebase-config.js";
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({ prompt: "select_account" });
 const $ = (id) => document.getElementById(id);
 let mode = "login";
 let authActionInProgress = false;
@@ -485,7 +482,6 @@ $("auth-form").addEventListener("submit", async (event) => {
   authActionInProgress = true;
   const button = $("auth-submit");
   button.disabled = true;
-  $("google-button").disabled = true;
   setMessage("");
   try {
     if (mode === "signup") {
@@ -509,8 +505,6 @@ $("auth-form").addEventListener("submit", async (event) => {
       "auth/invalid-email": "Please enter a valid email address.",
       "auth/weak-password": "Please choose a password with at least 6 characters.",
       "auth/invalid-credential": "The email or password is incorrect.",
-      "auth/popup-closed-by-user": "Google sign-in was closed before completion.",
-      "auth/popup-blocked": "Your browser blocked the Google sign-in window. Please allow pop-ups and try again.",
       "auth/account-exists-with-different-credential": "An account already exists with this email using another sign-in method. Sign in with that method first."
     };
     if (auth.currentUser && error.code !== "auth/invalid-credential") await signOut(auth).catch(() => {});
@@ -519,49 +513,6 @@ $("auth-form").addEventListener("submit", async (event) => {
   } finally {
     authActionInProgress = false;
     button.disabled = false;
-    $("google-button").disabled = false;
-  }
-});
-
-$("google-button").addEventListener("click", async () => {
-  if (authActionInProgress) return;
-  authActionInProgress = true;
-  $("google-button").disabled = true;
-  $("auth-submit").disabled = true;
-  setMessage("");
-  try {
-    if (mode === "signup" && (!$("full-name").value.trim() || !$("phone").value.trim() || !["study_abroad", "tourism"].includes($("service-type").value))) throw new Error("Enter your name and phone number, then select one service before continuing with Google.");
-    const credential = await signInWithPopup(auth, googleProvider);
-    const existingProfile = await getDoc(doc(db, "users", credential.user.uid));
-    if (existingProfile.exists()) {
-      const profile = existingProfile.data();
-      if (profile.role !== "client" || profile.accountStatus !== "active") throw new Error("This account is not authorised for Client Portal access.");
-      if (profile.serviceType) await ensureClientCase(credential.user, profile);
-      showDashboard(credential.user, profile);
-    } else if (mode === "signup") {
-      const fullName = $("full-name").value.trim();
-      const profile = await ensureClientProfile(credential.user, fullName, $("phone").value.trim(), $("service-type").value);
-      showDashboard(credential.user, profile);
-    } else {
-      await signOut(auth);
-      setMode("signup");
-      $("email").value = credential.user.email || "";
-      $("full-name").value = credential.user.displayName || "";
-      throw new Error("To create a new account with Google, choose Create an account, enter your phone / WhatsApp number, then continue with Google.");
-    }
-  } catch (error) {
-    const messages = {
-      "auth/popup-closed-by-user": "Google sign-in was closed before completion.",
-      "auth/popup-blocked": "Your browser blocked the Google sign-in window. Please allow pop-ups and try again.",
-      "auth/account-exists-with-different-credential": "An account already exists with this email using another sign-in method. Please sign in with that method first."
-    };
-    if (auth.currentUser && error.code !== "auth/account-exists-with-different-credential") await signOut(auth).catch(() => {});
-    setMessage(messages[error.code] || error.message || "Google sign-in could not be completed.");
-    console.error(error);
-  } finally {
-    authActionInProgress = false;
-    $("google-button").disabled = false;
-    $("auth-submit").disabled = false;
   }
 });
 
