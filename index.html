@@ -9,7 +9,7 @@
 <title>My Quorista | Quorista Overseas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./styles.css?v=20261031-6">
+<link rel="stylesheet" href="./styles.css?v=20261031-7">
 </head>
 <body>
 <header class="site-header"><div class="nav-wrap"><a class="brand" href="https://quoristaoverseas.in/" aria-label="Quorista Overseas home"><img src="https://quoristaoverseas.in/assets/quorista-logo.png" alt="Quorista Overseas"></a><nav><a href="https://quoristaoverseas.in/#study">Study Abroad</a><a href="https://quoristaoverseas.in/#travel">Tourism</a><a class="nav-cta" href="https://quoristaoverseas.in/">← Back to Home</a></nav></div></header>
@@ -22,6 +22,7 @@
 <p class="muted" id="auth-intro">Sign in to continue your journey with Quorista Overseas.</p>
 <form id="auth-form">
 <div id="name-field" class="hidden"><label for="full-name">Full name</label><input id="full-name" type="text" autocomplete="name" placeholder="Your full name"></div>
+<div id="phone-field" class="hidden"><label for="phone">Phone number / WhatsApp (with country code)</label><input id="phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="+91 98765 43210"></div>
 <label for="email">Email address</label><input id="email" type="email" autocomplete="username" required placeholder="you@example.com">
 <label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required minlength="6" placeholder="Enter your password">
 <button type="submit" id="auth-submit">Sign in <span>→</span></button>
@@ -64,7 +65,7 @@
 <div class="content-panel"><div class="panel-heading"><div><span class="section-kicker">ACCOUNT INFORMATION</span><h3>Personal details</h3><p>Your registered client account information.</p></div><span class="status-chip"><i></i> Account active</span></div>
 <div class="profile-avatar" id="profile-avatar">Q</div>
 <div class="profile-name" id="profile-name">Client</div><div class="profile-email-line" id="profile-email"></div>
-<div class="detail-grid"><div class="detail-item"><span>FULL NAME</span><strong id="detail-name">—</strong></div><div class="detail-item"><span>EMAIL ADDRESS</span><strong id="detail-email">—</strong></div><div class="detail-item"><span>ACCOUNT TYPE</span><strong>Client account</strong></div><div class="detail-item"><span>SIGN-IN METHOD</span><strong id="detail-provider">—</strong></div><div class="detail-item"><span>ACCOUNT CREATED</span><strong id="detail-created">—</strong></div><div class="detail-item"><span>ACCOUNT STATUS</span><strong class="active-text">Active</strong></div></div>
+<div class="detail-grid"><div class="detail-item"><span>FULL NAME</span><strong id="detail-name">—</strong></div><div class="detail-item"><span>EMAIL ADDRESS</span><strong id="detail-email">—</strong></div><div class="detail-item"><span>PHONE / WHATSAPP</span><strong id="detail-phone">—</strong></div><div class="detail-item"><span>ACCOUNT TYPE</span><strong>Client account</strong></div><div class="detail-item"><span>SIGN-IN METHOD</span><strong id="detail-provider">—</strong></div><div class="detail-item"><span>ACCOUNT CREATED</span><strong id="detail-created">—</strong></div><div class="detail-item"><span>ACCOUNT STATUS</span><strong class="active-text">Active</strong></div></div>
 <p class="privacy-note">Your account details are securely associated with your sign-in. To request a correction to your registered information, please contact Quorista Overseas.</p></div>
 </section>
 
@@ -80,5 +81,5 @@
 </section>
 <footer class="auth-footer" id="auth-footer">© <span id="year-auth"></span> Quorista Overseas <i>•</i> Study <i>•</i> Travel <i>•</i> Beyond Borders</footer>
 </section></div></main>
-<script type="module" src="./app.js?v=20261031-7"></script>
+<script type="module" src="./app.js?v=20261031-8"></script>
 </body></html>
