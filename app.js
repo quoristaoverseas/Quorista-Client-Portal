@@ -59,6 +59,7 @@ function showPage(page) {
   $("page-title").textContent = titles[selected][0];
   $("page-subtitle").textContent = titles[selected][1];
   if (selected === "applications" && applicationUser) renderApplicationWorkspace();
+  if (selected === "counsellor" && applicationUser) renderMyCounsellor();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -89,6 +90,50 @@ function populateProfile(user, profile) {
   $("detail-email").textContent = email;
   $("detail-provider").textContent = providerLabel(profile.authProvider || user.providerData.map((item) => item.providerId));
   $("detail-created").textContent = formatDate(profile.createdAt);
+}
+
+async function renderMyCounsellor() {
+  const root = $("counsellor-workspace");
+  if (!root || !applicationUser) return;
+  root.innerHTML = '<div class="content-panel empty-panel"><p class="muted">Loading your counsellor details…</p></div>';
+  try {
+    const snapshot = await getDocs(query(collection(db, "applications"), where("clientUid", "==", applicationUser.uid)));
+    const assigned = new Map();
+    snapshot.docs.forEach((item) => {
+      const data = item.data();
+      if (!data.assignedCounsellorUid && !data.assignedCounsellorName) return;
+      const key = data.assignedCounsellorUid || data.assignedCounsellorName;
+      if (!assigned.has(key)) {
+        assigned.set(key, {
+          uid: data.assignedCounsellorUid || "",
+          name: data.assignedCounsellorName || "Quorista counsellor",
+          designation: data.assignedCounsellorDesignation || "Counsellor",
+          email: data.assignedCounsellorEmail || "",
+          services: new Set(),
+          applications: []
+        });
+      }
+      const person = assigned.get(key);
+      if (!person.email && data.assignedCounsellorEmail) person.email = data.assignedCounsellorEmail;
+      if (!person.designation && data.assignedCounsellorDesignation) person.designation = data.assignedCounsellorDesignation;
+      person.services.add(data.applicationType === "study_abroad" ? "Study Abroad" : data.applicationType === "tourism" ? "International Tourism" : "Quorista services");
+      person.applications.push(data.applicantFullName || "Client application");
+    });
+
+    if (!assigned.size) {
+      root.innerHTML = '<div class="content-panel empty-panel"><div class="empty-illustration counsellor-illustration"><span>✧</span><i>✦</i></div><span class="section-kicker">PERSONAL GUIDANCE</span><h3>Your counsellor will appear here</h3><p>Your Quorista counsellor will be displayed here as soon as one is assigned to your application.</p><div class="coming-soon-tag"><span></span> Awaiting counsellor assignment</div></div>';
+      return;
+    }
+
+    root.innerHTML = '<div class="counsellor-intro"><span class="section-kicker">YOUR QUORISTA SUPPORT</span><h3>Meet your counsellor</h3><p>Your assigned point of contact for the applications listed below.</p></div><div class="counsellor-card-grid">' +
+      [...assigned.values()].map((person) => {
+        const email = person.email ? '<a class="counsellor-email" href="mailto:' + escapeApplicationHtml(person.email) + '">' + escapeApplicationHtml(person.email) + '</a>' : '<span class="counsellor-unavailable">Contact email not available yet</span>';
+        return '<article class="counsellor-profile-card"><div class="counsellor-profile-top"><div class="counsellor-avatar">' + escapeApplicationHtml((person.name.trim().charAt(0) || "Q").toUpperCase()) + '</div><div><span class="section-kicker">YOUR COUNSELLOR</span><h4>' + escapeApplicationHtml(person.name) + '</h4><p>' + escapeApplicationHtml(person.designation) + '</p></div></div><div class="counsellor-detail-row"><span>EMAIL</span>' + email + '</div><div class="counsellor-detail-row"><span>SERVICE</span><strong>' + escapeApplicationHtml([...person.services].join(" · ")) + '</strong></div><div class="counsellor-detail-row"><span>ASSIGNED APPLICATIONS</span><strong>' + person.applications.length + '</strong></div><div class="counsellor-assigned-cases"><span>APPLICATIONS</span><p>' + escapeApplicationHtml([...new Set(person.applications)].join(" · ")) + '</p></div></article>';
+      }).join("") + '</div>';
+  } catch (error) {
+    console.error("Could not load counsellor details:", error);
+    root.innerHTML = '<div class="content-panel empty-panel"><h3>We could not load your counsellor details</h3><p>Please try again in a moment. Your applications and progress updates are not affected.</p></div>';
+  }
 }
 
 
