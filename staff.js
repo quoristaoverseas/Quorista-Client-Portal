@@ -1,6 +1,6 @@
 import {initializeApp} from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
 import {getAuth,signInWithEmailAndPassword,onAuthStateChanged,signOut} from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
-import {getFirestore,doc,getDoc,setDoc,collection,getDocs,query,where,updateDoc,addDoc,serverTimestamp} from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+import {getFirestore,doc,getDoc,setDoc,collection,getDocs,query,where,updateDoc,writeBatch,serverTimestamp} from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 import {firebaseConfig} from "./firebase-config.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),$=id=>document.getElementById(id);
 const ADMIN_UID="oqgmvKDsJQc7WdDcjOVi5YIohAj1";
@@ -120,6 +120,16 @@ async function loadCases(){
   if(metricTourism)metricTourism.textContent=records.filter(a=>a.applicationType==="tourism").length;
   const staffSnap=isAdmin?await getDocs(collection(db,"staff")):null;
   const staff=staffSnap?staffSnap.docs.map(d=>({uid:d.id,...d.data()})).filter(s=>s.active):[];
+  let noteDocs=[];
+  if(isAdmin){const noteSnap=await getDocs(collection(db,"internal_notes"));noteDocs=noteSnap.docs;}
+  else{
+   const permitted=staffProfile?.services||[];
+   const noteBatches=await Promise.all(permitted.map(service=>getDocs(query(collection(db,"internal_notes"),where("assignedCounsellorUid","==",currentUser.uid),where("applicationType","==",service)))));
+   noteDocs=noteBatches.flatMap(batch=>batch.docs);
+  }
+  const notesByApplication=new Map();
+  noteDocs.forEach(noteDoc=>{const note=noteDoc.data();const bucket=notesByApplication.get(note.applicationId)||[];bucket.push(note);notesByApplication.set(note.applicationId,bucket);});
+
   const search=$("case-search"),statusFilter=$("case-status-filter"),serviceFilter=$("case-service-filter"),assignmentFilter=$("case-assignment-filter"),sortFilter=$("case-sort");
   const render=()=>{
    const term=(search?.value||"").trim().toLowerCase();
@@ -150,7 +160,9 @@ async function loadCases(){
     const studyStatuses=["submitted","under_review","counselling_scheduled","profile_assessment","university_shortlisting","university_application","offer_received","deposit_pending","visa_documentation","visa_submitted","visa_decision","pre_departure","awaiting_client","completed","on_hold"];
     const tourismStatuses=["submitted","under_review","consultation_scheduled","itinerary_planning","documents_pending","visa_documentation","visa_submitted","visa_decision","travel_ready","awaiting_client","completed","on_hold"];
     const statusOptions=(a.applicationType==="tourism"?tourismStatuses:studyStatuses).map(v=>'<option value="'+v+'" '+((a.progressStatus||"submitted")===v?"selected":"")+'>'+v.replaceAll("_"," ")+'</option>').join("");
-    return '<article class="case-item"><div class="item-head"><div><strong>'+esc(a.applicantFullName||"Study Abroad applicant")+'</strong><br><small>'+esc(a.applyingFor||"Myself")+' · '+esc(a.applicationType==="study_abroad"?"Study Abroad":a.applicationType)+'</small></div><span class="pill">'+esc((a.progressStatus||"submitted").replaceAll("_"," "))+'</span></div><div class="case-meta"><span class="muted">Submitted: '+esc(formatCaseDate(a.createdAt))+'</span><span class="muted">Counsellor: '+esc(a.assignedCounsellorName||"Not assigned")+'</span></div>'+caseDetailsMarkup(a)+'<div class="case-controls">'+assignment+
+    const privateNotes=(notesByApplication.get(a.id)||[]).sort((x,y)=>{const xv=x.createdAt?.toMillis?x.createdAt.toMillis():0,yv=y.createdAt?.toMillis?y.createdAt.toMillis():0;return yv-xv;});
+    const privateNotesMarkup=privateNotes.length?'<details class="private-notes"><summary>Private counsellor notes ('+privateNotes.length+')</summary>'+privateNotes.map(n=>'<div class="private-note-entry"><p>'+esc(n.note)+'</p><small>'+esc(formatCaseDate(n.createdAt))+'</small></div>').join("")+'</details>':'<p class="private-notes-empty">No internal notes recorded yet.</p>';
+    return '<article class="case-item"><div class="item-head"><div><strong>'+esc(a.applicantFullName||"Study Abroad applicant")+'</strong><br><small>'+esc(a.applyingFor||"Myself")+' · '+esc(a.applicationType==="study_abroad"?"Study Abroad":a.applicationType)+'</small></div><span class="pill">'+esc((a.progressStatus||"submitted").replaceAll("_"," "))+'</span></div><div class="case-meta"><span class="muted">Submitted: '+esc(formatCaseDate(a.createdAt))+'</span><span class="muted">Counsellor: '+esc(a.assignedCounsellorName||"Not assigned")+'</span></div>'+caseDetailsMarkup(a)+privateNotesMarkup+'<div class="case-controls">'+assignment+
     '<label>Progress status<select data-status="'+esc(a.id)+'">'+statusOptions+'</select></label>'+
     '<div class="case-university-fields '+((a.progressStatus||"").includes("university_application")?"":"hidden")+'" data-university-fields="'+esc(a.id)+'"><strong>University application details</strong>'+
     '<label>University name<input data-university-name="'+esc(a.id)+'" value="'+esc(a.universityDetails?.universityName||"")+'" placeholder="University name"></label>'+
@@ -216,12 +228,14 @@ async function loadCases(){
      const followAction=root.querySelector('[data-followup-action="'+id+'"]').value.trim();
      if((followDate&&!followAction)||(!followDate&&followAction))throw new Error("Enter both a follow-up date and action, or leave both blank.");
      const internal=root.querySelector('[data-internal-note="'+id+'"]').value.trim();
+     const batch=writeBatch(db);
      const patch={progressStatus:status,progressUpdate:clientMessage,lastProgressUpdatedAt:serverTimestamp(),updatedAt:serverTimestamp()};
      if(status==="university_application")patch.universityDetails=universityDetails;
-     await updateDoc(doc(db,"applications",id),patch);
-     await addDoc(collection(db,"status_updates"),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,status,clientMessage,createdByUid:currentUser.uid,createdAt:serverTimestamp()});
-     if(internal)await addDoc(collection(db,"internal_notes"),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,note:internal,createdByUid:currentUser.uid,createdAt:serverTimestamp()});
-     if(followDate&&followAction)await addDoc(collection(db,"follow_ups"),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,assignedCounsellorUid:record.assignedCounsellorUid||currentUser.uid,followUpDate:followDate,action:followAction,status:"open",createdByUid:currentUser.uid,createdAt:serverTimestamp()});
+     batch.update(doc(db,"applications",id),patch);
+     batch.set(doc(collection(db,"status_updates")),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,status,clientMessage,createdByUid:currentUser.uid,createdAt:serverTimestamp()});
+     if(internal)batch.set(doc(collection(db,"internal_notes")),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,assignedCounsellorUid:record.assignedCounsellorUid||currentUser.uid,note:internal,createdByUid:currentUser.uid,createdAt:serverTimestamp()});
+     if(followDate&&followAction)batch.set(doc(collection(db,"follow_ups")),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,assignedCounsellorUid:record.assignedCounsellorUid||currentUser.uid,followUpDate:followDate,action:followAction,status:"open",createdByUid:currentUser.uid,createdAt:serverTimestamp()});
+     await batch.commit();
      await loadCases();
     }catch(e){alert("Could not save update: "+e.message);btn.disabled=false;btn.textContent="Save case update";}
    }));
