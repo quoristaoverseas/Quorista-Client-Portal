@@ -40,6 +40,8 @@ onAuthStateChanged(auth, async (user) => {
       profile.role === "client" &&
       profile.accountStatus === "active"
     );
+    // Ignore a stale profile lookup if the visitor signed out or changed accounts meanwhile.
+    if (auth.currentUser?.uid !== user.uid) return;
     reportSignedIn(isActiveClient);
   } catch (error) {
     console.error("Unable to verify the Quorista client session.", error);
