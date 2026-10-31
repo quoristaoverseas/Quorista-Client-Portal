@@ -85,3 +85,57 @@ footer{color:#9994aa}
  .login-card{padding:28px 22px}
 }
 @media(max-width:420px){.case-detail-grid{grid-template-columns:1fr}.item-head{gap:8px;flex-direction:column}}
+
+
+/* Staff Workspace application shell and navigation */
+.workspace-shell{display:grid;grid-template-columns:248px minmax(0,1fr);gap:24px;align-items:start;width:100%}
+.workspace-sidebar{position:sticky;top:22px;min-height:calc(100vh - 130px);padding:17px 13px;background:linear-gradient(180deg,#100943,#171052);border-radius:20px;color:#fff;box-shadow:0 18px 42px rgba(12,7,53,.16)}
+.sidebar-caption{padding:10px 12px 15px;color:#aaa1df;font:800 .61rem Manrope;letter-spacing:.18em}
+.workspace-nav{width:100%;display:flex;align-items:center;gap:12px;padding:12px;border:0;border-radius:12px;background:transparent;color:#d8d3f1;text-align:left;cursor:pointer;margin:3px 0;font-family:'DM Sans',sans-serif}
+.workspace-nav>span:first-child{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.08);font-size:1.1rem}
+.workspace-nav b{display:block;font-size:.78rem;font-weight:800}.workspace-nav small{display:block;margin-top:2px;color:#aaa4ca;font-size:.65rem}
+.workspace-nav:hover,.workspace-nav.active{background:linear-gradient(100deg,rgba(119,91,244,.35),rgba(119,91,244,.12));color:#fff}
+.workspace-nav.active>span:first-child{background:#765bf0;color:#fff}
+.sidebar-note{position:absolute;bottom:18px;left:16px;right:16px;padding:14px;border:1px solid rgba(255,255,255,.13);border-radius:12px;background:rgba(255,255,255,.06)}
+.sidebar-note strong{font:800 .7rem Manrope}.sidebar-note p{margin:5px 0 0;color:#bbb5d8;font-size:.65rem;line-height:1.5}
+.workspace-main{min-width:0}.workspace-main .topline{margin-bottom:19px}
+.workspace-view{min-width:0}.welcome-banner{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:225px;padding:30px 34px;border-radius:20px;background:linear-gradient(115deg,#100943,#21136d 72%,#4933a0);color:#fff;box-shadow:0 18px 38px rgba(28,16,94,.15)}
+.welcome-banner .eyebrow{color:#bdb1ff}.welcome-banner h2{max-width:580px;margin:9px 0;color:#fff;font:800 clamp(1.35rem,2.5vw,2rem) Manrope;letter-spacing:-.04em}
+.welcome-banner p{max-width:600px;margin:0 0 18px;color:#d5d0ef;font-size:.82rem;line-height:1.7}
+.welcome-banner .primary{background:#fff;color:#3f2b9e;box-shadow:none}
+.banner-orbit{position:relative;display:grid;place-items:center;width:154px;height:154px;min-width:154px;border:1px solid rgba(255,255,255,.22);border-radius:50%;background:radial-gradient(circle,rgba(157,137,255,.35),rgba(157,137,255,.03) 68%);box-shadow:0 0 0 18px rgba(255,255,255,.035),0 0 0 38px rgba(255,255,255,.025)}
+.banner-orbit:before,.banner-orbit:after{content:"";position:absolute;inset:13px;border:1px solid rgba(255,255,255,.18);border-radius:50%}.banner-orbit:after{inset:-15px;border-style:dashed}
+.banner-orbit span{font:800 3.3rem Manrope;color:#fff;text-shadow:0 8px 24px rgba(0,0,0,.2)}
+.overview-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin:17px 0}
+.metric-card{position:relative;min-width:0;padding:18px;border:1px solid #ece9f5;border-radius:15px;background:#fff;box-shadow:0 8px 22px rgba(25,17,70,.035)}
+.metric-icon{display:grid;place-items:center;width:34px;height:34px;margin-bottom:14px;border-radius:10px;background:#eeeaff;color:#5c46c7;font-size:1rem}
+.metric-icon.violet{background:#f0edff;color:#7158dc}.metric-icon.mint{background:#e7f7f1;color:#16815e}.metric-icon.amber{background:#fff4df;color:#b77913}
+.metric-card small{display:block;color:#85809b;font-size:.6rem;font-weight:800;letter-spacing:.1em}
+.metric-card strong{display:block;margin:4px 0;color:#100943;font:800 1.8rem Manrope}
+.metric-card p{margin:0;color:#88839b;font-size:.67rem}
+.overview-bottom{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.overview-info{padding:21px;border:1px solid #ece9f5;border-radius:15px;background:#fff}
+.overview-info .eyebrow{color:#7866c7}.overview-info h3{margin:8px 0;color:#100943;font:800 1rem Manrope}
+.overview-info p{margin:0 0 15px;color:#77738d;font-size:.78rem;line-height:1.65}
+.section-intro{display:flex;align-items:center;justify-content:space-between;gap:15px;margin:4px 0 16px;padding:22px 25px;border:1px solid #ece9f5;border-radius:17px;background:linear-gradient(110deg,#fff,#f6f3ff)}
+.section-intro .eyebrow{color:#7866c7}.section-intro h2{margin:5px 0;color:#100943;font:800 1.4rem Manrope;letter-spacing:-.03em}
+.section-intro p{margin:0;color:#77738d;font-size:.8rem}
+.case-panel{margin:0}
+@media(max-width:1050px){.workspace-shell{grid-template-columns:205px minmax(0,1fr);gap:16px}.overview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){
+ .workspace-shell{grid-template-columns:1fr;gap:13px}
+ .workspace-sidebar{position:static;min-height:0;display:flex;gap:5px;padding:9px;border-radius:14px;overflow-x:auto}
+ .sidebar-caption,.sidebar-note{display:none}
+ .workspace-nav{flex:1;min-width:105px;justify-content:center;gap:7px;padding:9px 7px;margin:0}
+ .workspace-nav>span:first-child{width:28px;height:28px;font-size:.9rem}
+ .workspace-nav b{font-size:.68rem}.workspace-nav small{display:none}
+ .workspace-main .topline{padding:19px;margin-bottom:13px}
+ .welcome-banner{padding:23px;min-height:0}.banner-orbit{width:90px;height:90px;min-width:90px}.banner-orbit span{font-size:2rem}
+ .overview-bottom{grid-template-columns:1fr}
+}
+@media(max-width:480px){
+ .workspace-nav{min-width:85px;flex-direction:column;gap:4px}.workspace-nav b{font-size:.62rem}
+ .welcome-banner{padding:20px}.banner-orbit{display:none}
+ .overview-grid{gap:9px}.metric-card{padding:14px}.metric-card strong{font-size:1.5rem}
+ .section-intro{align-items:flex-start;flex-direction:column;padding:19px}.section-intro .secondary{align-self:flex-end}
+}
