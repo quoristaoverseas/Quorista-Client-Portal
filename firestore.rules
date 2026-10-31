@@ -35,14 +35,14 @@ service cloud.firestore {
   match /internal_notes/{noteId}{
    function linkedApplication(){return get(/databases/$(database)/documents/applications/$(resource.data.applicationId)).data;}
    allow create: if isSuperAdmin() || (signedIn() && request.resource.data.createdByUid==request.auth.uid && assignedToMe(get(/databases/$(database)/documents/applications/$(request.resource.data.applicationId)).data));
-   allow read: if isSuperAdmin() || (signedIn() && assignedToMe(linkedApplication()));
+   allow read: if isSuperAdmin() || (signedIn() && resource.data.assignedCounsellorUid==request.auth.uid && serviceAllowed(resource.data.applicationType));
    allow update,delete: if isSuperAdmin();
   }
   match /follow_ups/{followUpId}{
    function linkedApplication(){return get(/databases/$(database)/documents/applications/$(resource.data.applicationId)).data;}
    allow create: if isSuperAdmin() || (signedIn() && request.resource.data.createdByUid==request.auth.uid && assignedToMe(get(/databases/$(database)/documents/applications/$(request.resource.data.applicationId)).data));
-   allow read: if isSuperAdmin() || (signedIn() && assignedToMe(linkedApplication()));
-   allow update: if isSuperAdmin() || (signedIn() && assignedToMe(linkedApplication()) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status","followUpDate","action","completedAt","updatedAt"]));
+   allow read: if isSuperAdmin() || (signedIn() && resource.data.assignedCounsellorUid==request.auth.uid && serviceAllowed(resource.data.applicationType));
+   allow update: if isSuperAdmin() || (signedIn() && resource.data.assignedCounsellorUid==request.auth.uid && serviceAllowed(resource.data.applicationType) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status","followUpDate","action","completedAt","updatedAt"]));
    allow delete: if isSuperAdmin();
   }
   match /{document=**}{allow read,write: if isSuperAdmin();}
