@@ -1,6 +1,6 @@
 import {initializeApp} from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
 import {getAuth,signInWithEmailAndPassword,onAuthStateChanged,signOut} from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
-import {getFirestore,doc,getDoc,setDoc,collection,getDocs,query,where,updateDoc,serverTimestamp} from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+import {getFirestore,doc,getDoc,setDoc,collection,getDocs,query,where,updateDoc,addDoc,serverTimestamp} from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 import {firebaseConfig} from "./firebase-config.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),$=id=>document.getElementById(id);
 const ADMIN_UID="oqgmvKDsJQc7WdDcjOVi5YIohAj1";
@@ -147,8 +147,20 @@ async function loadCases(){
    root.innerHTML=shown.map(a=>{
     const choices=staff.filter(s=>(s.services||[]).includes(a.applicationType)).map(s=>'<option value="'+esc(s.uid)+'" '+(a.assignedCounsellorUid===s.uid?'selected':'')+'>'+esc(s.fullName)+' · '+esc(servicesLabel(s.services))+'</option>').join("");
     const assignment=isAdmin?'<label>Assign counsellor<select data-assign="'+esc(a.id)+'"><option value="">Unassigned</option>'+choices+'</select></label>':'';
-    const statusOptions=["submitted","under_review","contacted","in_progress","awaiting_client","completed","on_hold"].map(v=>'<option value="'+v+'" '+((a.progressStatus||"submitted")===v?"selected":"")+'>'+v.replaceAll("_"," ")+'</option>').join("");
-    return '<article class="case-item"><div class="item-head"><div><strong>'+esc(a.applicantFullName||"Study Abroad applicant")+'</strong><br><small>'+esc(a.applyingFor||"Myself")+' · '+esc(a.applicationType==="study_abroad"?"Study Abroad":a.applicationType)+'</small></div><span class="pill">'+esc((a.progressStatus||"submitted").replaceAll("_"," "))+'</span></div><div class="case-meta"><span class="muted">Submitted: '+esc(formatCaseDate(a.createdAt))+'</span><span class="muted">Counsellor: '+esc(a.assignedCounsellorName||"Not assigned")+'</span></div>'+caseDetailsMarkup(a)+'<div class="case-controls">'+assignment+'<label>Progress status<select data-status="'+esc(a.id)+'">'+statusOptions+'</select></label><label>Client-visible progress update<textarea data-note="'+esc(a.id)+'" placeholder="Write a concise update for the client">'+esc(a.progressUpdate||"")+'</textarea></label><button class="primary" data-save="'+esc(a.id)+'">Save update</button></div></article>';
+    const studyStatuses=["submitted","under_review","counselling_scheduled","profile_assessment","university_shortlisting","university_application","offer_received","deposit_pending","visa_documentation","visa_submitted","visa_decision","pre_departure","awaiting_client","completed","on_hold"];
+    const tourismStatuses=["submitted","under_review","consultation_scheduled","itinerary_planning","documents_pending","visa_documentation","visa_submitted","visa_decision","travel_ready","awaiting_client","completed","on_hold"];
+    const statusOptions=(a.applicationType==="tourism"?tourismStatuses:studyStatuses).map(v=>'<option value="'+v+'" '+((a.progressStatus||"submitted")===v?"selected":"")+'>'+v.replaceAll("_"," ")+'</option>').join("");
+    return '<article class="case-item"><div class="item-head"><div><strong>'+esc(a.applicantFullName||"Study Abroad applicant")+'</strong><br><small>'+esc(a.applyingFor||"Myself")+' · '+esc(a.applicationType==="study_abroad"?"Study Abroad":a.applicationType)+'</small></div><span class="pill">'+esc((a.progressStatus||"submitted").replaceAll("_"," "))+'</span></div><div class="case-meta"><span class="muted">Submitted: '+esc(formatCaseDate(a.createdAt))+'</span><span class="muted">Counsellor: '+esc(a.assignedCounsellorName||"Not assigned")+'</span></div>'+caseDetailsMarkup(a)+'<div class="case-controls">'+assignment+
+    '<label>Progress status<select data-status="'+esc(a.id)+'">'+statusOptions+'</select></label>'+
+    '<div class="case-university-fields '+((a.progressStatus||"").includes("university_application")?"":"hidden")+'" data-university-fields="'+esc(a.id)+'"><strong>University application details</strong>'+
+    '<label>University name<input data-university-name="'+esc(a.id)+'" value="'+esc(a.universityDetails?.universityName||"")+'" placeholder="University name"></label>'+
+    '<label>Country<input data-university-country="'+esc(a.id)+'" value="'+esc(a.universityDetails?.country||"")+'" placeholder="Country"></label>'+
+    '<label>Program level<input data-university-level="'+esc(a.id)+'" value="'+esc(a.universityDetails?.programLevel||"")+'" placeholder="Undergraduate / Postgraduate"></label>'+
+    '<label>Intake<input data-university-intake="'+esc(a.id)+'" value="'+esc(a.universityDetails?.intake||"")+'" placeholder="Month and year"></label></div>'+
+    '<label>Client-visible progress update<textarea data-note="'+esc(a.id)+'" placeholder="A suggested update will be generated automatically if left blank">'+esc(a.progressUpdate||"")+'</textarea></label>'+
+    '<label>Private internal note<textarea data-internal-note="'+esc(a.id)+'" placeholder="Only authorised staff can read this note"></textarea></label>'+
+    '<div class="case-followup-fields"><label>Next follow-up date<input type="date" data-followup-date="'+esc(a.id)+'"></label><label>Follow-up action<input data-followup-action="'+esc(a.id)+'" placeholder="Call client / email university / review documents"></label></div>'+
+    '<button class="primary" data-save="'+esc(a.id)+'">Save case update</button></div></article>';
    }).join("");
    root.querySelectorAll("[data-assign]").forEach(el=>el.addEventListener("change",async()=>{
     el.disabled=true;
@@ -158,13 +170,62 @@ async function loadCases(){
      await loadCases();
     }catch(e){alert("Could not assign this application: "+e.message);el.disabled=false;}
    }));
+   root.querySelectorAll("[data-status]").forEach(el=>el.addEventListener("change",()=>{
+    const fields=root.querySelector('[data-university-fields="'+el.dataset.status+'"]');
+    if(fields)fields.classList.toggle("hidden",el.value!=="university_application");
+   }));
    root.querySelectorAll("[data-save]").forEach(btn=>btn.addEventListener("click",async()=>{
-    const id=btn.dataset.save;btn.disabled=true;btn.textContent="Saving…";
+    const id=btn.dataset.save,record=records.find(item=>item.id===id);btn.disabled=true;btn.textContent="Saving…";
     try{
-     const patch={progressStatus:root.querySelector('[data-status="'+id+'"]').value,progressUpdate:root.querySelector('[data-note="'+id+'"]').value.trim(),lastProgressUpdatedAt:serverTimestamp(),updatedAt:serverTimestamp()};
+     const status=root.querySelector('[data-status="'+id+'"]').value;
+     const universityDetails={
+      universityName:root.querySelector('[data-university-name="'+id+'"]')?.value.trim()||"",
+      country:root.querySelector('[data-university-country="'+id+'"]')?.value.trim()||"",
+      programLevel:root.querySelector('[data-university-level="'+id+'"]')?.value.trim()||"",
+      intake:root.querySelector('[data-university-intake="'+id+'"]')?.value.trim()||""
+     };
+     const statusLabels={
+      submitted:"Your application has been received by Quorista. Our team will review the information and contact you about the next steps.",
+      under_review:"Your application is currently under review by the Quorista team.",
+      counselling_scheduled:"A counselling discussion is being arranged for your application.",
+      profile_assessment:"Your academic and personal profile is being assessed.",
+      university_shortlisting:"We are reviewing suitable university and course options for your preferences.",
+      university_application:"Your university application is being prepared or processed.",
+      offer_received:"An admission decision or offer has been received. Your counsellor will guide you through the next steps.",
+      deposit_pending:"The next step involves reviewing the university deposit requirements and deadlines.",
+      visa_documentation:"We are working through the documentation requirements for your visa stage.",
+      visa_submitted:"Your visa application has been submitted. We will share further updates when available.",
+      visa_decision:"Your visa application is awaiting a decision from the relevant authorities.",
+      pre_departure:"Your case has reached the pre-departure preparation stage.",
+      consultation_scheduled:"A tourism consultation is being arranged for your travel requirements.",
+      itinerary_planning:"Your travel preferences are being reviewed and your itinerary is being planned.",
+      documents_pending:"Some travel or visa documents are pending review or submission.",
+      travel_ready:"Your travel preparation has reached the final readiness stage.",
+      awaiting_client:"We need some information or documents from you before we can proceed. Please contact your counsellor.",
+      completed:"This stage of your application has been marked complete. Please contact your counsellor if you need any clarification.",
+      on_hold:"Your application has temporarily been placed on hold. Your counsellor will contact you about the next steps."
+     };
+     const manual=root.querySelector('[data-note="'+id+'"]').value.trim();
+     let clientMessage=manual||statusLabels[status]||"Your application status has been updated.";
+     if(status==="university_application"){
+      const detail=[universityDetails.universityName,universityDetails.country,universityDetails.programLevel,universityDetails.intake].filter(Boolean).join(" · ");
+      if(detail)clientMessage+=" Details: "+detail+".";
+      if(!universityDetails.universityName||!universityDetails.country||!universityDetails.programLevel||!universityDetails.intake)throw new Error("Complete university name, country, program level and intake before saving this stage.");
+     }
+     const patch={progressStatus:status,progressUpdate:clientMessage,lastProgressUpdatedAt:serverTimestamp(),updatedAt:serverTimestamp()};
+     if(status==="university_application")patch.universityDetails=universityDetails;
      await updateDoc(doc(db,"applications",id),patch);
+     await addDoc(collection(db,"status_updates"),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,status,clientMessage,createdByUid:currentUser.uid,createdAt:serverTimestamp()});
+     const internal=root.querySelector('[data-internal-note="'+id+'"]').value.trim();
+     if(internal)await addDoc(collection(db,"internal_notes"),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,note:internal,createdByUid:currentUser.uid,createdAt:serverTimestamp()});
+     const followDate=root.querySelector('[data-followup-date="'+id+'"]').value;
+     const followAction=root.querySelector('[data-followup-action="'+id+'"]').value.trim();
+     if(followDate||followAction){
+      if(!followDate||!followAction)throw new Error("Enter both a follow-up date and action, or leave both blank.");
+      await addDoc(collection(db,"follow_ups"),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,assignedCounsellorUid:record.assignedCounsellorUid||currentUser.uid,followUpDate:followDate,action:followAction,status:"open",createdByUid:currentUser.uid,createdAt:serverTimestamp()});
+     }
      await loadCases();
-    }catch(e){alert("Could not save update: "+e.message);btn.disabled=false;btn.textContent="Save update";}
+    }catch(e){alert("Could not save update: "+e.message);btn.disabled=false;btn.textContent="Save case update";}
    }));
   };
   [search,statusFilter,serviceFilter,assignmentFilter,sortFilter].forEach(control=>{if(control)control.oninput=render;});
