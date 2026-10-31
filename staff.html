@@ -6,7 +6,7 @@
 <section id="workspace" class="workspace-shell hidden">
 <aside class="workspace-sidebar"><div class="sidebar-caption">WORKSPACE</div>
 <button class="workspace-nav active" data-view="overview"><span>⌂</span><span><b>Overview</b><small>Workspace summary</small></span></button>
-<button class="workspace-nav" data-view="cases"><span>▤</span><span><b>Case management</b><small>Applications & progress</small></span></button>
+<button class="workspace-nav" data-view="cases"><span>▤</span><span><b>Case management</b><small>Applications & progress</small></span></button>\n<button class="workspace-nav" data-view="followups"><span>◷</span><span><b>Follow-ups</b><small>Calls, emails & next actions</small></span></button>
 <button class="workspace-nav admin-only hidden" data-view="team"><span>♧</span><span><b>Team management</b><small>Staff & permissions</small></span></button>
 <div class="sidebar-note"><strong>Quorista Operations</strong><p>Confidential workspace for authorised personnel.</p></div>
 </aside>
@@ -32,7 +32,7 @@
 <label>Sort by<select id="case-sort"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="name">Applicant name</option><option value="status">Progress status</option></select></label>
 </div><p id="case-count" class="case-count" aria-live="polite"></p><div id="case-list" class="stack"><p class="muted">Loading applications…</p></div></div>
 </section>
-<section id="view-team" class="workspace-view hidden">
+<section id="view-followups" class="workspace-view hidden"><div class="section-intro"><div><div class="eyebrow">CLIENT RELATIONSHIPS</div><h2>Follow-ups</h2><p>Review upcoming client actions and mark completed follow-ups.</p></div><button id="refresh-followups" class="secondary">Refresh follow-ups</button></div><div class="panel"><div id="follow-up-list" class="stack"><p class="muted">Loading follow-ups…</p></div></div></section>\n<section id="view-team" class="workspace-view hidden">
 <div class="section-intro"><div><div class="eyebrow">PLATFORM ADMINISTRATION</div><h2>Team management</h2><p>Create staff profiles, maintain service permissions and manage authorised access.</p></div></div>
 <div id="admin-panel" class="panel"><div class="panel-head"><div><h2>Add a counsellor</h2><p>Staff Firebase accounts must be created separately in Firebase Authentication first.</p></div></div>
 <form id="staff-form" class="staff-form"><label>Staff Firebase UID<input id="staff-uid" required placeholder="Paste the user's Firebase Authentication UID"></label><label>Full name<input id="staff-name" required placeholder="Counsellor full name"></label><label>Email<input id="staff-email" type="email" required placeholder="name@example.com"></label><label>Designation<input id="staff-title" required value="Study Abroad Counsellor"></label><fieldset><legend>Permitted services</legend><label class="check"><input type="checkbox" name="service" value="study_abroad"> Study Abroad</label><label class="check"><input type="checkbox" name="service" value="tourism"> International Tourism</label></fieldset><button class="primary" type="submit">Create counsellor profile</button><p id="staff-message" class="message"></p></form><h3>Authorised staff</h3><div id="staff-list" class="stack"><p class="muted">Loading staff…</p></div></div>
