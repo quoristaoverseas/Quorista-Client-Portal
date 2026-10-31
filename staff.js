@@ -246,25 +246,55 @@ async function loadCases(){
 }
 
 async function loadFollowUps(){
- const root=$("follow-up-list");if(!root)return;
+ const root=$("follow-up-list");
+ if(!root)return;
  root.innerHTML='<p class="muted">Loading follow-ups…</p>';
  try{
   let docs=[];
-  if(isAdmin){const snap=await getDocs(collection(db,"follow_ups"));docs=snap.docs;}
-  else{
+  if(isAdmin){
+   const snap=await getDocs(collection(db,"follow_ups"));
+   docs=snap.docs;
+  }else{
    const services=staffProfile?.services||[];
-   const batches=await Promise.all(services.map(service=>getDocs(query(collection(db,"follow_ups"),where("assignedCounsellorUid","==",currentUser.uid),where("applicationType","==",service)))));
+   const batches=await Promise.all(services.map(service=>
+    getDocs(query(collection(db,"follow_ups"),
+     where("assignedCounsellorUid","==",currentUser.uid),
+     where("applicationType","==",service)))
+   ));
    docs=batches.flatMap(batch=>batch.docs);
   }
-  const items=docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>String(a.followUpDate||"").localeCompare(String(b.followUpDate||"")));
-  if(!items.length){root.innerHTML='<div class="empty">No follow-ups have been scheduled yet. Add a follow-up from a case in Case Management.</div>';return;}
-  root.innerHTML=items.map(item=>'<article class="followup-item"><div><strong>'+esc(item.action||"Follow-up")+'</strong><p>'+esc(item.followUpDate||"Date not set")+' · '+esc(item.applicationType==="study_abroad"?"Study Abroad":"International Tourism")+'</p><small>Application: '+esc(item.applicationId)+'</small></div><span class="pill '+(item.status==="completed"?"active":"inactive")+'">'+esc(item.status||"open")+'</span>'+(item.status==="completed"?'':'<button class="secondary" type="button" data-followup-complete="'+esc(item.id)+'">Mark complete</button>')+'</article>').join("");
-  root.querySelectorAll("[data-followup-complete]").forEach(button=>button.addEventListener("click",async()=>{
-   button.disabled=true;button.textContent="Updating…";
-   try{await updateDoc(doc(db,"follow_ups",button.dataset.followupComplete),{status:"completed",completedAt:serverTimestamp(),updatedAt:serverTimestamp()});await loadFollowUps();}
-   catch(error){alert("Could not complete follow-up: "+error.message);button.disabled=false;button.textContent="Mark complete";}
-  }));
- }catch(error){console.error(error);root.innerHTML='<div class="empty">Follow-ups could not be loaded. Check Firestore permissions and try again.</div>';}
+  const items=docs.map(item=>({id:item.id,...item.data()}))
+   .sort((a,b)=>String(a.followUpDate||"").localeCompare(String(b.followUpDate||"")));
+  if(!items.length){
+   root.innerHTML='<div class="empty">No follow-ups have been scheduled yet. Add a follow-up from a case in Case Management.</div>';
+   return;
+  }
+  root.innerHTML=items.map(item=>{
+   const serviceLabel=item.applicationType==="study_abroad"?"Study Abroad":"International Tourism";
+   const status=item.status||"open";
+   const completeButton=status==="completed"?"":'<button class="secondary" type="button" data-followup-complete="'+esc(item.id)+'">Mark complete</button>';
+   return '<article class="followup-item"><div><strong>'+esc(item.action||"Follow-up")+'</strong><p>'+esc(item.followUpDate||"Date not set")+' · '+serviceLabel+'</p><small>Application: '+esc(item.applicationId)+'</small></div><span class="pill '+(status==="completed"?"active":"inactive")+'">'+esc(status)+'</span>'+completeButton+'</article>';
+  }).join("");
+  root.querySelectorAll("[data-followup-complete]").forEach(button=>{
+   button.addEventListener("click",async()=>{
+    button.disabled=true;
+    button.textContent="Updating…";
+    try{
+     await updateDoc(doc(db,"follow_ups",button.dataset.followupComplete),{
+      status:"completed",completedAt:serverTimestamp(),updatedAt:serverTimestamp()
+     });
+     await loadFollowUps();
+    }catch(error){
+     alert("Could not complete follow-up: "+error.message);
+     button.disabled=false;
+     button.textContent="Mark complete";
+    }
+   });
+  });
+ }catch(error){
+  console.error(error);
+  root.innerHTML='<div class="empty">Follow-ups could not be loaded. Check Firestore permissions and try again.</div>';
+ }
 }
 
 $("login-form").addEventListener("submit",async e=>{e.preventDefault();$("login-button").disabled=true;message("login-message","");try{const c=await signInWithEmailAndPassword(auth,$("email").value.trim(),$("password").value);await enterWorkspace(c.user);}catch(err){message("login-message",err.message||"Sign-in failed.");if(auth.currentUser)await signOut(auth).catch(()=>{});}finally{$("login-button").disabled=false;}});
