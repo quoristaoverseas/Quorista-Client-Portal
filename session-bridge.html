@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quorista Account Session Bridge</title>
+</head>
+<body>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+import { firebaseConfig } from "./firebase-config.js";
+
+const MAIN_SITE_ORIGIN = "https://quoristaoverseas.in";
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+function reportSignedIn(isSignedIn) {
+  if (window.parent !== window) {
+    window.parent.postMessage(
+      { type: "QUORISTA_CLIENT_SESSION", signedIn: Boolean(isSignedIn) },
+      MAIN_SITE_ORIGIN
+    );
+  }
+}
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    reportSignedIn(false);
+    return;
+  }
+
+  try {
+    const profileSnapshot = await getDoc(doc(db, "users", user.uid));
+    const profile = profileSnapshot.exists() ? profileSnapshot.data() : null;
+    const isActiveClient = Boolean(
+      profile &&
+      profile.role === "client" &&
+      profile.accountStatus === "active"
+    );
+    reportSignedIn(isActiveClient);
+  } catch (error) {
+    console.error("Unable to verify the Quorista client session.", error);
+    reportSignedIn(false);
+  }
+});
+</script>
+</body>
+</html>
