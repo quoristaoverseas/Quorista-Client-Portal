@@ -411,9 +411,14 @@ async function loadClientProgress() {
             (legacyArchived.length?'<details class="previous-cycle-card"><summary><span><strong>Earlier progress history</strong><small>Updates recorded before progress cycles were introduced</small></span><em>Archived</em></summary><div class="previous-cycle-entries">'+legacyArchived.sort((x,y)=>{const xv=x.createdAt?.toMillis?x.createdAt.toMillis():new Date(x.createdAt||0).getTime();const yv=y.createdAt?.toMillis?y.createdAt.toMillis():new Date(y.createdAt||0).getTime();return yv-xv;}).map(entry=>'<article><strong>'+escapeApplicationHtml(statusLabel(entry.status))+'</strong><small>'+escapeApplicationHtml(formatDate(entry.createdAt))+'</small><p>'+escapeApplicationHtml(entry.clientMessage||"Progress update")+'</p></article>').join("")+'</div></details>':'')+'</section>'
           : "";
         const currentStatus = statusLabel(data.progressStatus);
-        const latestMessage = data.progressUpdate || "Your case is registered. Your Quorista counsellor will contact you about the next steps.";
-        const latestDate = data.lastProgressUpdatedAt || data.updatedAt || data.createdAt;
-        const latestUniversity = data.universityDetails || {};
+        const rawActiveHistory = (updatesByApplication.get(item.id) || []).filter(entry => !currentCycleId || entry.cycleId === currentCycleId).sort((x,y) => {
+          const xv=x.createdAt?.toMillis?x.createdAt.toMillis():new Date(x.createdAt||0).getTime();
+          const yv=y.createdAt?.toMillis?y.createdAt.toMillis():new Date(y.createdAt||0).getTime();return yv-xv;
+        });
+        const latestWasHidden = rawActiveHistory.length && rawActiveHistory[0].hiddenFromClient === true;
+        const latestMessage = history.length ? history[0].clientMessage : (latestWasHidden ? "Your current case stage is "+statusLabel(data.progressStatus)+". Your Quorista team will share the next client-visible update when appropriate." : data.progressUpdate || "Your case is registered. Your Quorista counsellor will contact you about the next steps.");
+        const latestDate = history[0]?.createdAt || data.lastProgressUpdatedAt || data.updatedAt || data.createdAt;
+                const latestUniversity = data.universityDetails || {};
         const latestUniversityMarkup = universityStages.includes(data.progressStatus) && latestUniversity.universityName
           ? '<div class="university-update-details"><span class="update-detail-kicker">UNIVERSITY / ADMISSION DETAILS</span><div class="university-update-grid">' +
             [['University',latestUniversity.universityName],['Country',latestUniversity.country],['Course / Programme',latestUniversity.programLevel],['Intake',latestUniversity.intake]].filter(pair => pair[1]).map(pair => '<div><span>' + escapeApplicationHtml(pair[0]) + '</span><strong>' + escapeApplicationHtml(pair[1]) + '</strong></div>').join("") +
