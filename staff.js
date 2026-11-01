@@ -293,6 +293,8 @@ async function loadCases(){
    const noteBatches=await Promise.all(permitted.map(service=>getDocs(query(collection(db,"internal_notes"),where("assignedCounsellorUid","==",currentUser.uid),where("applicationType","==",service)))));
    noteDocs=noteBatches.flatMap(batch=>batch.docs);
   }
+  let progressUpdateDocs=[];
+  if(isAdmin){const progressSnap=await getDocs(collection(db,"status_updates"));progressUpdateDocs=progressSnap.docs.map(d=>({id:d.id,...d.data()}));}
   const notesByApplication=new Map();
   noteDocs.forEach(noteDoc=>{const note=noteDoc.data();const bucket=notesByApplication.get(note.applicationId)||[];bucket.push(note);notesByApplication.set(note.applicationId,bucket);});
 
@@ -327,7 +329,14 @@ async function loadCases(){
     const statusOptions=progressStatusOptions(statusGroups,a.progressStatus||"registered");
     const privateNotes=(notesByApplication.get(a.id)||[]).sort((x,y)=>{const xv=x.createdAt?.toMillis?x.createdAt.toMillis():0,yv=y.createdAt?.toMillis?y.createdAt.toMillis():0;return yv-xv;});
     const privateNotesMarkup=privateNotes.length?'<details class="private-notes"><summary>Private counsellor notes ('+privateNotes.length+')</summary>'+privateNotes.map(n=>'<div class="private-note-entry"><p>'+esc(n.note)+'</p><small>'+esc(formatCaseDate(n.createdAt))+'</small></div>').join("")+'</details>':'<p class="private-notes-empty">No internal notes recorded yet.</p>';
-    return '<article class="case-item"><div class="item-head"><div><strong>'+esc(a.applicantFullName||"Study Abroad applicant")+'</strong><br><small>'+esc(a.applyingFor||"Myself")+' · '+esc(a.applicationType==="study_abroad"?"Study Abroad":a.applicationType)+'</small></div><span class="pill">'+esc(progressStatusLabel(a.progressStatus||"registered"))+'</span></div><div class="case-meta"><span class="muted">Submitted: '+esc(formatCaseDate(a.createdAt))+'</span><span class="muted">Counsellor: '+esc(a.assignedCounsellorName||"Not assigned")+'</span></div>'+caseDetailsMarkup(a)+privateNotesMarkup+'<details class="case-update-panel"><summary>Update case progress <span>Open to change the client-visible stage, share an update or schedule a follow-up</span></summary><div class="case-controls">'+assignment+
+    const caseUpdates=progressUpdateDocs.filter(update=>update.applicationId===a.id).sort((x,y)=>{
+     const xv=x.createdAt?.toMillis?x.createdAt.toMillis():new Date(x.createdAt||0).getTime();
+     const yv=y.createdAt?.toMillis?y.createdAt.toMillis():new Date(y.createdAt||0).getTime();return yv-xv;
+    });
+    const updateManagementMarkup=isAdmin?'<details class="progress-admin-history"><summary>Manage client-visible updates ('+caseUpdates.length+')</summary>'+
+     (caseUpdates.length?caseUpdates.map(update=>'<div class="progress-admin-entry"><div><strong>'+esc(progressStatusLabel(update.status))+'</strong><p>'+esc(update.clientMessage||"Progress update")+'</p><small>'+esc(formatCaseDate(update.createdAt))+'</small></div><button type="button" class="secondary '+(update.hiddenFromClient?"":"danger-outline")+'" data-toggle-update="'+esc(update.id)+'" data-hidden="'+(update.hiddenFromClient?"true":"false")+'">'+(update.hiddenFromClient?"Restore for client":"Hide from client")+'</button></div>').join(""):'<p class="muted">No progress updates have been posted yet.</p>')+'</details>':'';
+
+    return '<article class="case-item"><div class="item-head"><div><strong>'+esc(a.applicantFullName||"Study Abroad applicant")+'</strong><br><small>'+esc(a.applyingFor||"Myself")+' · '+esc(a.applicationType==="study_abroad"?"Study Abroad":a.applicationType)+'</small></div><span class="pill">'+esc(progressStatusLabel(a.progressStatus||"registered"))+'</span></div><div class="case-meta"><span class="muted">Submitted: '+esc(formatCaseDate(a.createdAt))+'</span><span class="muted">Counsellor: '+esc(a.assignedCounsellorName||"Not assigned")+'</span></div>'+caseDetailsMarkup(a)+privateNotesMarkup+updateManagementMarkup+'<details class="case-update-panel"><summary>Update case progress <span>Open to change the client-visible stage, share an update or schedule a follow-up</span></summary><div class="case-controls">'+assignment+
     '<label>Progress status<select data-status="'+esc(a.id)+'">'+statusOptions+'</select></label>'+
     '<div class="case-university-fields '+(UNIVERSITY_PROGRESS_STATUSES.includes(a.progressStatus||"")?"":"hidden")+'" data-university-fields="'+esc(a.id)+'"><strong>University application details</strong>'+
     '<label>University name<input data-university-name="'+esc(a.id)+'" value="'+esc(a.universityDetails?.universityName||"")+'" placeholder="University name"></label>'+
@@ -337,7 +346,8 @@ async function loadCases(){
     '<label>Client-visible progress update<textarea data-note="'+esc(a.id)+'" placeholder="Leave blank to use the tailored message for this stage, or enter a custom update"></textarea></label>'+
     '<label>Private internal note<textarea data-internal-note="'+esc(a.id)+'" placeholder="Only authorised staff can read this note"></textarea></label>'+
     '<div class="case-followup-fields"><label>Next follow-up date<input type="date" data-followup-date="'+esc(a.id)+'"></label><label>Follow-up action<input data-followup-action="'+esc(a.id)+'" placeholder="Call client / email university / review documents"></label></div>'+
-    '<button class="primary case-save-button" data-save="'+esc(a.id)+'">Save case update</button></div></details></article>';
+    '<button class="primary case-save-button" data-save="'+esc(a.id)+'">Save case update</button></div></details>'+
+    '<details class="case-cycle-panel"><summary>Start a new progress cycle</summary><div class="case-cycle-controls"><p>A new cycle creates a clean client-facing timeline. Previous cycles are archived and remain available.</p><label>Reason for starting again<select data-cycle-reason="'+esc(a.id)+'"><option value="">Select a reason</option><option>University application unsuccessful</option><option>Change of university</option><option>Change of country or destination</option><option>New intake</option><option>Revised study plan</option><option>Client requested a fresh start</option><option>Other</option></select></label><label>Additional context (optional)<textarea data-cycle-note="'+esc(a.id)+'" placeholder="Briefly explain the new direction or next plan"></textarea></label><button type="button" class="secondary" data-new-cycle="'+esc(a.id)+'">Archive current cycle & start new</button></div></details></article>';
    }).join("");
    root.querySelectorAll("[data-assign]").forEach(el=>el.addEventListener("change",async()=>{
     el.disabled=true;
@@ -368,6 +378,36 @@ async function loadCases(){
     const fields=root.querySelector('[data-university-fields="'+el.dataset.status+'"]');
     if(fields)fields.classList.toggle("hidden",!UNIVERSITY_PROGRESS_STATUSES.includes(el.value));
    }));
+   root.querySelectorAll("[data-toggle-update]").forEach(button=>button.addEventListener("click",async()=>{
+    if(!isAdmin)return;
+    const hidden=button.dataset.hidden==="true";
+    if(!confirm(hidden?"Restore this update to the client's portal?":"Hide this update from the client's portal? The record will remain preserved."))return;
+    button.disabled=true;
+    try{
+     await updateDoc(doc(db,"status_updates",button.dataset.toggleUpdate),{hiddenFromClient:!hidden,hiddenReason:hidden?deleteField():"Hidden by authorised administrator",hiddenAt:!hidden?serverTimestamp():deleteField(),hiddenByUid:!hidden?currentUser.uid:deleteField()});
+     await loadCases();showStaffToast(hidden?"Update restored to the client portal.":"Update hidden from the client portal. The record is preserved.");
+    }catch(error){alert("Could not change update visibility: "+error.message);button.disabled=false;}
+   }));
+   root.querySelectorAll("[data-new-cycle]").forEach(button=>button.addEventListener("click",async()=>{
+    const id=button.dataset.newCycle,record=records.find(item=>item.id===id);if(!record)return;
+    const reason=root.querySelector('[data-cycle-reason="'+id+'"]').value;
+    const note=root.querySelector('[data-cycle-note="'+id+'"]').value.trim();
+    if(!reason){alert("Please select a reason before starting a new progress cycle.");return;}
+    const detail=note?reason+" — "+note:reason;
+    if(!confirm("Start a fresh client-facing progress timeline for this case? The previous cycle will be archived and preserved."))return;
+    button.disabled=true;button.textContent="Starting new cycle…";
+    try{
+     const batch=writeBatch(db),cycleRef=doc(collection(db,"progress_cycles"));
+     const previousCycleId=record.activeProgressCycleId||"";
+     if(previousCycleId)batch.update(doc(db,"progress_cycles",previousCycleId),{status:"archived",archivedAt:serverTimestamp(),archivedByUid:currentUser.uid,archiveReason:detail});
+     const cycleNumber=previousCycleId?Number(record.progressCycleNumber||1)+1:2;
+     batch.set(cycleRef,{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,cycleNumber,label:"Application cycle "+cycleNumber,reason:detail,status:"active",createdByUid:currentUser.uid,assignedCounsellorUid:record.assignedCounsellorUid||currentUser.uid,createdAt:serverTimestamp()});
+     const clientMessage="A new application progress cycle has been started. Reason: "+detail+". Your previous progress history has been archived and remains available separately. Your counsellor will guide you through the next steps.";
+     batch.update(doc(db,"applications",id),{activeProgressCycleId:cycleRef.id,progressCycleNumber:cycleNumber,progressStatus:"registered",progressUpdate:clientMessage,universityDetails:deleteField(),lastProgressUpdatedAt:serverTimestamp(),updatedAt:serverTimestamp()});
+     batch.set(doc(collection(db,"status_updates")),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,cycleId:cycleRef.id,status:"registered",clientMessage,createdByUid:currentUser.uid,assignedCounsellorUid:record.assignedCounsellorUid||currentUser.uid,createdAt:serverTimestamp()});
+     await batch.commit();await loadCases();showStaffToast("New progress cycle started. Previous history has been archived.");
+    }catch(error){alert("Could not start a new progress cycle: "+error.message);button.disabled=false;button.textContent="Archive current cycle & start new";}
+   }));
    root.querySelectorAll("[data-save]").forEach(btn=>btn.addEventListener("click",async()=>{
     const id=btn.dataset.save,record=records.find(item=>item.id===id);btn.disabled=true;btn.textContent="Saving…";
     try{
@@ -394,10 +434,15 @@ async function loadCases(){
      if((followDate&&!followAction)||(!followDate&&followAction))throw new Error("Enter both a follow-up date and action, or leave both blank.");
      const internal=root.querySelector('[data-internal-note="'+id+'"]').value.trim();
      const batch=writeBatch(db);
-     const patch={progressStatus:status,progressUpdate:clientMessage,lastProgressUpdatedAt:serverTimestamp(),updatedAt:serverTimestamp()};
+     let cycleId=record.activeProgressCycleId||"";
+     if(!cycleId){
+      const cycleRef=doc(collection(db,"progress_cycles"));cycleId=cycleRef.id;
+      batch.set(cycleRef,{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,cycleNumber:1,label:"Initial progress cycle",reason:"Initial progress tracking",status:"active",createdByUid:currentUser.uid,assignedCounsellorUid:record.assignedCounsellorUid||currentUser.uid,createdAt:serverTimestamp()});
+     }
+     const patch={progressStatus:status,progressUpdate:clientMessage,lastProgressUpdatedAt:serverTimestamp(),updatedAt:serverTimestamp(),activeProgressCycleId:cycleId,progressCycleNumber:record.progressCycleNumber||1};
      if(hasUniversityDetails)patch.universityDetails=universityDetails;
      batch.update(doc(db,"applications",id),patch);
-     batch.set(doc(collection(db,"status_updates")),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,status,clientMessage,universityDetails:hasUniversityDetails?universityDetails:null,createdByUid:currentUser.uid,createdAt:serverTimestamp()});
+     batch.set(doc(collection(db,"status_updates")),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,cycleId,status,clientMessage,universityDetails:hasUniversityDetails?universityDetails:null,createdByUid:currentUser.uid,assignedCounsellorUid:record.assignedCounsellorUid||currentUser.uid,createdAt:serverTimestamp()});
      if(internal)batch.set(doc(collection(db,"internal_notes")),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,assignedCounsellorUid:record.assignedCounsellorUid||currentUser.uid,note:internal,createdByUid:currentUser.uid,createdAt:serverTimestamp()});
      if(followDate&&followAction)batch.set(doc(collection(db,"follow_ups")),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,assignedCounsellorUid:record.assignedCounsellorUid||currentUser.uid,followUpDate:followDate,action:followAction,status:"open",createdByUid:currentUser.uid,createdAt:serverTimestamp()});
      await batch.commit();
