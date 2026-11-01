@@ -389,15 +389,6 @@ async function loadCases(){
       const context="University: "+universityDetails.universityName+" · Country: "+universityDetails.country+" · Course: "+level+" · Intake: "+universityDetails.intake+". ";
       clientMessage=context+clientMessage;
      }
-     const manual=root.querySelector('[data-note="'+id+'"]').value.trim();
-     let clientMessage=manual||statusLabels[status]||"Your application status has been updated.";
-     if(status==="university_application"){
-      if(!universityDetails.universityName||!universityDetails.country||!universityDetails.programLevel||!universityDetails.intake)throw new Error("Complete university name, country, program level and intake before saving this stage.");
-      const levelLabels={bachelors:"Bachelor's",bachelor:"Bachelor's",masters:"Master's",master:"Master's",phd:"PhD",doctorate:"doctoral"};
-      const rawLevel=universityDetails.programLevel.trim();
-      const level=levelLabels[rawLevel.toLowerCase()]||rawLevel;
-      clientMessage="Your application for the "+level+" programme at "+universityDetails.universityName+" in "+universityDetails.country+" for the "+universityDetails.intake+" intake is currently in progress. Our team is coordinating the required application steps and will keep you informed of any developments.";
-     }
      const followDate=root.querySelector('[data-followup-date="'+id+'"]').value;
      const followAction=root.querySelector('[data-followup-action="'+id+'"]').value.trim();
      if((followDate&&!followAction)||(!followDate&&followAction))throw new Error("Enter both a follow-up date and action, or leave both blank.");
