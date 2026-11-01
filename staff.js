@@ -334,7 +334,7 @@ async function loadCases(){
     '<label>Country<input data-university-country="'+esc(a.id)+'" value="'+esc(a.universityDetails?.country||"")+'" placeholder="Country"></label>'+
     '<label>Course / programme<input data-university-level="'+esc(a.id)+'" value="'+esc(a.universityDetails?.programLevel||"")+'" placeholder="e.g. MSc Data Science / BBA"></label>'+
     '<label>Intake<input data-university-intake="'+esc(a.id)+'" value="'+esc(a.universityDetails?.intake||"")+'" placeholder="Month and year"></label></div>'+
-    '<label>Client-visible progress update<textarea data-note="'+esc(a.id)+'" placeholder="A suggested update will be generated automatically if left blank">'+esc(a.progressUpdate||"")+'</textarea></label>'+
+    '<label>Client-visible progress update<textarea data-note="'+esc(a.id)+'" placeholder="Leave blank to use the tailored message for this stage, or enter a custom update"></textarea></label>'+
     '<label>Private internal note<textarea data-internal-note="'+esc(a.id)+'" placeholder="Only authorised staff can read this note"></textarea></label>'+
     '<div class="case-followup-fields"><label>Next follow-up date<input type="date" data-followup-date="'+esc(a.id)+'"></label><label>Follow-up action<input data-followup-action="'+esc(a.id)+'" placeholder="Call client / email university / review documents"></label></div>'+
     '<button class="primary case-save-button" data-save="'+esc(a.id)+'">Save case update</button></div></details></article>';
