@@ -59,7 +59,7 @@ service cloud.firestore {
   match /progress_cycles/{cycleId}{
    function linkedApplication(){return get(/databases/$(database)/documents/applications/$(resource.data.applicationId)).data;}
    allow create: if isSuperAdmin() || (signedIn() && request.resource.data.createdByUid==request.auth.uid && request.resource.data.clientUid==get(/databases/$(database)/documents/applications/$(request.resource.data.applicationId)).data.clientUid && assignedToMe(get(/databases/$(database)/documents/applications/$(request.resource.data.applicationId)).data));
-   allow read: if isSuperAdmin() || (signedIn() && resource.data.clientUid==request.auth.uid) || (signedIn() && assignedToMe(linkedApplication()));
+   allow read: if isSuperAdmin() || (signedIn() && resource.data.clientUid==request.auth.uid) || (signedIn() && resource.data.assignedCounsellorUid==request.auth.uid && serviceAllowed(resource.data.applicationType));
    allow update: if isSuperAdmin() || (signedIn() && assignedToMe(linkedApplication()) && request.resource.data.status=="archived" && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status","archivedAt","archivedByUid","archiveReason"]));
    allow delete: if isSuperAdmin();
   }
