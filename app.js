@@ -416,10 +416,10 @@ async function loadClientProgress() {
           const yv=y.createdAt?.toMillis?y.createdAt.toMillis():new Date(y.createdAt||0).getTime();return yv-xv;
         });
         const latestWasHidden = rawActiveHistory.length && rawActiveHistory[0].hiddenFromClient === true;
-        const latestMessage = history.length ? history[0].clientMessage : (latestWasHidden ? "Your current case stage is "+statusLabel(data.progressStatus)+". Your Quorista team will share the next client-visible update when appropriate." : data.progressUpdate || "Your case is registered. Your Quorista counsellor will contact you about the next steps.");
-        const latestDate = history[0]?.createdAt || data.lastProgressUpdatedAt || data.updatedAt || data.createdAt;
+        const latestMessage = latestWasHidden ? "Your current case stage is "+statusLabel(data.progressStatus)+". Your Quorista team will share the next client-visible update when appropriate." : (history.length ? history[0].clientMessage : data.progressUpdate || "Your case is registered. Your Quorista counsellor will contact you about the next steps.");
+        const latestDate = latestWasHidden ? (data.lastProgressUpdatedAt || data.updatedAt || data.createdAt) : (history[0]?.createdAt || data.lastProgressUpdatedAt || data.updatedAt || data.createdAt);
                 const latestUniversity = data.universityDetails || {};
-        const latestUniversityMarkup = universityStages.includes(data.progressStatus) && latestUniversity.universityName
+        const latestUniversityMarkup = !latestWasHidden && universityStages.includes(data.progressStatus) && latestUniversity.universityName
           ? '<div class="university-update-details"><span class="update-detail-kicker">UNIVERSITY / ADMISSION DETAILS</span><div class="university-update-grid">' +
             [['University',latestUniversity.universityName],['Country',latestUniversity.country],['Course / Programme',latestUniversity.programLevel],['Intake',latestUniversity.intake]].filter(pair => pair[1]).map(pair => '<div><span>' + escapeApplicationHtml(pair[0]) + '</span><strong>' + escapeApplicationHtml(pair[1]) + '</strong></div>').join("") +
             '</div></div>' : "";
