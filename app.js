@@ -24,9 +24,9 @@ function setMessage(message, isError = true) {
 function setMode(nextMode) {
   mode = nextMode;
   const signup = mode === "signup";
-  $("auth-heading").textContent = signup ? "Create your account." : "Welcome back.";
+  $("auth-heading").textContent = signup ? "Start your journey abroad." : "Welcome back.";
   $("auth-intro").textContent = signup
-    ? "Create your free client account and start your journey with Quorista Overseas."
+    ? "Create your free Quorista account and take the first step towards your study or travel plans overseas."
     : "Sign in to continue your journey with Quorista Overseas.";
   $("name-field").classList.toggle("hidden", !signup);
   $("phone-field").classList.toggle("hidden", !signup);
@@ -517,6 +517,8 @@ async function loadExistingClient(user) {
 }
 
 $("mode-toggle").addEventListener("click", () => setMode(mode === "login" ? "signup" : "login"));
+const requestedMode = new URLSearchParams(window.location.search).get("mode");
+if (requestedMode === "signup") setMode("signup");
 
 document.querySelectorAll('input[name="service-choice"]').forEach((choice) => {
   choice.addEventListener("change", () => {
