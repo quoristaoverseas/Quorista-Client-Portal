@@ -356,7 +356,27 @@ async function loadClientProgress() {
       bucket.push(update);
       updatesByApplication.set(update.applicationId, bucket);
     });
-    const statusLabel = value => String(value || "registered").replaceAll("_", " ").replace(/\b\w/g, letter => letter.toUpperCase());
+    const statusNames={
+      registered:"Case Registered",submitted:"Application Submitted",under_review:"Initial Review",
+      counselling_scheduled:"Counselling Scheduled",profile_assessment:"Profile Assessment",
+      documents_pending:"Documents Required",documents_under_review:"Documents Under Review",
+      university_shortlisting:"University Shortlisting",shortlist_shared:"University Shortlist Shared",
+      university_application:"University Application In Progress",application_preparation:"Application Preparation",
+      application_submitted:"University Application Submitted",application_under_review:"University Reviewing Application",
+      additional_information_requested:"University Requested More Information",offer_received:"Admission Offer Received",
+      offer_conditions_pending:"Offer Conditions Pending",offer_accepted:"Admission Offer Accepted",
+      deposit_pending:"Tuition Deposit Pending",deposit_paid:"Tuition Deposit Confirmed",
+      visa_documentation:"Visa Documents Preparation",visa_appointment_scheduled:"Visa Appointment Scheduled",
+      visa_submitted:"Visa Application Submitted",visa_decision:"Visa Decision Received",
+      pre_departure:"Pre-departure Preparation",travel_ready:"Ready for Travel",
+      consultation_scheduled:"Travel Consultation Scheduled",requirements_review:"Travel Requirements Review",
+      itinerary_planning:"Itinerary Planning",itinerary_shared:"Travel Itinerary Shared",quotation_shared:"Travel Quotation Shared",
+      booking_confirmation_pending:"Booking Confirmation Pending",bookings_confirmed:"Bookings Confirmed",
+      trip_in_progress:"Trip In Progress",trip_completed:"Trip Completed",
+      awaiting_client:"Awaiting Your Response",on_hold:"Case Temporarily On Hold",completed:"Case Completed"
+    };
+    const universityStages=["university_shortlisting","shortlist_shared","university_application","application_preparation","application_submitted","application_under_review","additional_information_requested","offer_received","offer_conditions_pending","offer_accepted","deposit_pending","deposit_paid"];
+    const statusLabel = value => statusNames[value] || String(value || "registered").replaceAll("_", " ").replace(/\b\w/g, letter => letter.toUpperCase());
     root.innerHTML = '<div class="progress-page-intro"><span class="section-kicker">YOUR QUORISTA JOURNEY</span><h3>Every step, clearly explained.</h3><p>See where each case stands and read the updates shared by your counsellor and the Quorista team.</p></div>' +
       snapshot.docs.map(item => {
         const data = item.data();
@@ -370,17 +390,17 @@ async function loadClientProgress() {
         const latestMessage = data.progressUpdate || "Your case is registered. Your Quorista counsellor will contact you about the next steps.";
         const latestDate = data.lastProgressUpdatedAt || data.updatedAt || data.createdAt;
         const latestUniversity = data.universityDetails || {};
-        const latestUniversityMarkup = data.progressStatus === "university_application" && latestUniversity.universityName
-          ? '<div class="university-update-details"><span class="update-detail-kicker">UNIVERSITY APPLICATION</span><div class="university-update-grid">' +
-            [['University',latestUniversity.universityName],['Country',latestUniversity.country],['Programme',latestUniversity.programLevel],['Intake',latestUniversity.intake]].filter(pair => pair[1]).map(pair => '<div><span>' + escapeApplicationHtml(pair[0]) + '</span><strong>' + escapeApplicationHtml(pair[1]) + '</strong></div>').join("") +
+        const latestUniversityMarkup = universityStages.includes(data.progressStatus) && latestUniversity.universityName
+          ? '<div class="university-update-details"><span class="update-detail-kicker">UNIVERSITY / ADMISSION DETAILS</span><div class="university-update-grid">' +
+            [['University',latestUniversity.universityName],['Country',latestUniversity.country],['Course / Programme',latestUniversity.programLevel],['Intake',latestUniversity.intake]].filter(pair => pair[1]).map(pair => '<div><span>' + escapeApplicationHtml(pair[0]) + '</span><strong>' + escapeApplicationHtml(pair[1]) + '</strong></div>').join("") +
             '</div></div>' : "";
         const historyMarkup = history.length
           ? '<div class="progress-history-heading"><span class="section-kicker">UPDATE HISTORY</span><h4>Previous updates</h4></div><div class="progress-timeline">' +
             history.map(entry => {
-              const details = entry.universityDetails || (entry.status === "university_application" ? latestUniversity : null);
+              const details = entry.universityDetails || (universityStages.includes(entry.status) ? latestUniversity : null);
               const detailMarkup = details && details.universityName
-                ? '<div class="university-update-details compact"><span class="update-detail-kicker">UNIVERSITY DETAILS</span><div class="university-update-grid">' +
-                  [['University',details.universityName],['Country',details.country],['Programme',details.programLevel],['Intake',details.intake]].filter(pair => pair[1]).map(pair => '<div><span>' + escapeApplicationHtml(pair[0]) + '</span><strong>' + escapeApplicationHtml(pair[1]) + '</strong></div>').join("") +
+                ? '<div class="university-update-details compact"><span class="update-detail-kicker">UNIVERSITY / ADMISSION DETAILS</span><div class="university-update-grid">' +
+                  [['University',details.universityName],['Country',details.country],['Course / Programme',details.programLevel],['Intake',details.intake]].filter(pair => pair[1]).map(pair => '<div><span>' + escapeApplicationHtml(pair[0]) + '</span><strong>' + escapeApplicationHtml(pair[1]) + '</strong></div>').join("") +
                   '</div></div>' : "";
               return '<article class="progress-timeline-entry"><div class="timeline-marker"></div><div class="timeline-entry-card"><div class="timeline-entry-meta"><strong>' + escapeApplicationHtml(statusLabel(entry.status)) + '</strong><span>' + escapeApplicationHtml(formatDate(entry.createdAt)) + '</span></div><p>' + escapeApplicationHtml(entry.clientMessage || "Your application status has been updated.") + '</p>' + detailMarkup + '</div></article>';
             }).join("") + '</div>'
