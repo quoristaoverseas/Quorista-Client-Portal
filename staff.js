@@ -23,6 +23,91 @@ async function removeLegacyCounsellorEmails(){
  }
 }
 
+
+const STUDY_PROGRESS_STAGES=[
+ ["Case received",["registered","submitted","under_review"]],
+ ["Counselling & profile",["counselling_scheduled","profile_assessment"]],
+ ["Documents",["documents_pending","documents_under_review"]],
+ ["University selection",["university_shortlisting","shortlist_shared"]],
+ ["University applications",["university_application","application_preparation","application_submitted","application_under_review","additional_information_requested"]],
+ ["Admission & deposit",["offer_received","offer_conditions_pending","offer_accepted","deposit_pending","deposit_paid"]],
+ ["Visa & departure",["visa_documentation","visa_appointment_scheduled","visa_submitted","visa_decision","pre_departure","travel_ready"]],
+ ["Other",["awaiting_client","on_hold","completed"]]
+];
+const TOURISM_PROGRESS_STAGES=[
+ ["Case & consultation",["registered","submitted","under_review","consultation_scheduled","requirements_review"]],
+ ["Travel planning",["itinerary_planning","itinerary_shared","quotation_shared"]],
+ ["Bookings",["booking_confirmation_pending","bookings_confirmed"]],
+ ["Documents & visa",["documents_pending","visa_documentation","visa_appointment_scheduled","visa_submitted","visa_decision"]],
+ ["Travel",["travel_ready","trip_in_progress","trip_completed"]],
+ ["Other",["awaiting_client","on_hold","completed"]]
+];
+const PROGRESS_STATUS_LABELS={
+ registered:"Case Registered",submitted:"Application Submitted",under_review:"Initial Review",
+ counselling_scheduled:"Counselling Scheduled",profile_assessment:"Profile Assessment",
+ documents_pending:"Documents Required",documents_under_review:"Documents Under Review",
+ university_shortlisting:"University Shortlisting",shortlist_shared:"University Shortlist Shared",
+ university_application:"University Application In Progress",application_preparation:"Application Preparation",
+ application_submitted:"University Application Submitted",application_under_review:"University Reviewing Application",
+ additional_information_requested:"University Requested More Information",offer_received:"Admission Offer Received",
+ offer_conditions_pending:"Offer Conditions Pending",offer_accepted:"Admission Offer Accepted",
+ deposit_pending:"Tuition Deposit Pending",deposit_paid:"Tuition Deposit Confirmed",
+ visa_documentation:"Visa Documents Preparation",visa_appointment_scheduled:"Visa Appointment Scheduled",
+ visa_submitted:"Visa Application Submitted",visa_decision:"Visa Decision Received",
+ pre_departure:"Pre-departure Preparation",travel_ready:"Ready for Travel",
+ consultation_scheduled:"Travel Consultation Scheduled",requirements_review:"Travel Requirements Review",
+ itinerary_planning:"Itinerary Planning",itinerary_shared:"Travel Itinerary Shared",quotation_shared:"Travel Quotation Shared",
+ booking_confirmation_pending:"Booking Confirmation Pending",bookings_confirmed:"Bookings Confirmed",
+ trip_in_progress:"Trip In Progress",trip_completed:"Trip Completed",
+ awaiting_client:"Awaiting Your Response",on_hold:"Case Temporarily On Hold",completed:"Case Completed"
+};
+const UNIVERSITY_PROGRESS_STATUSES=["university_shortlisting","shortlist_shared","university_application","application_preparation","application_submitted","application_under_review","additional_information_requested","offer_received","offer_conditions_pending","offer_accepted","deposit_pending","deposit_paid"];
+const CLIENT_STATUS_MESSAGES={
+ registered:"Your Quorista case has been created. Our team will review the information available and guide you through the next steps.",
+ submitted:"Your application details have been submitted to Quorista. The team will now check the information and confirm the next action.",
+ under_review:"A Quorista team member is reviewing your case details. We will contact you if clarification or additional information is needed.",
+ counselling_scheduled:"A counselling discussion has been scheduled. Your counsellor will connect with you at the agreed time to discuss your goals and next steps.",
+ profile_assessment:"Your academic profile and study preferences are being assessed so that the guidance and options shared with you are relevant to your plans.",
+ documents_pending:"Some documents or information are still required to move your case forward. Please review the request from your counsellor and share the pending items.",
+ documents_under_review:"The documents you provided are being checked for completeness and consistency. We will let you know if anything needs to be corrected or added.",
+ university_shortlisting:"Your study preferences and profile are being matched against suitable universities and programmes. The shortlist is being prepared for discussion.",
+ shortlist_shared:"Your university shortlist has been prepared and shared for your review. Please discuss your preferred options with your counsellor before the application stage.",
+ university_application:"Your university application is in progress. The team is coordinating the application requirements and will share the next milestone as it is reached.",
+ application_preparation:"The application for the selected programme is being prepared. Your counsellor is checking the required information and supporting documents before submission.",
+ application_submitted:"The university application has been submitted. It is now with the institution for processing; the next update will be shared when the university responds or requests anything further.",
+ application_under_review:"The university is reviewing the submitted application. Processing timelines can vary by institution, and we will keep you informed when a decision or request is received.",
+ additional_information_requested:"The university has requested additional information or supporting documents. Your counsellor will guide you on what is needed so the response can be prepared.",
+ offer_received:"An admission offer has been received from the university. Your counsellor will help you understand the offer details, conditions and response deadline.",
+ offer_conditions_pending:"The admission offer includes conditions that must be met. Your counsellor will explain the outstanding requirements and the documents or results needed.",
+ offer_accepted:"The admission offer has been accepted. The team will guide you through the next university requirements, including any applicable deposit and enrolment steps.",
+ deposit_pending:"The university deposit is pending. Please review the amount, payment instructions and deadline shared by your counsellor before making a payment.",
+ deposit_paid:"The university deposit has been recorded as paid. The team will proceed with the next enrolment and visa-preparation steps as applicable.",
+ visa_documentation:"Your visa documentation is being prepared and checked. Your counsellor will identify any missing documents before the application is lodged.",
+ visa_appointment_scheduled:"A visa appointment has been scheduled. Please follow the appointment instructions and keep the required original documents ready.",
+ visa_submitted:"Your visa application has been submitted to the relevant authorities. The decision is outside Quorista's control; we will share updates when available.",
+ visa_decision:"A visa decision has been received. Your counsellor will explain the next steps based on the decision and the official communication.",
+ pre_departure:"Your case has reached pre-departure preparation. The team will help you review practical arrangements and important information before travel.",
+ travel_ready:"Your preparation has reached the travel-ready stage. Please check the latest travel documents, dates and instructions shared by your counsellor.",
+ consultation_scheduled:"A consultation about your travel requirements has been scheduled. Your counsellor will discuss your preferences, dates and suitable arrangements.",
+ requirements_review:"Your travel requirements are being reviewed, including destination, dates, traveller details and any relevant documentation.",
+ itinerary_planning:"Your travel preferences are being used to prepare a suitable itinerary. The proposed route and arrangements will be shared for your review.",
+ itinerary_shared:"Your proposed travel itinerary has been shared. Please review the dates, route and inclusions with your counsellor before confirming arrangements.",
+ quotation_shared:"A travel quotation has been prepared and shared for your review. Please check the inclusions, exclusions, validity and payment terms before proceeding.",
+ booking_confirmation_pending:"The requested travel arrangements are awaiting confirmation. Bookings should be treated as confirmed only after the relevant provider issues confirmation.",
+ bookings_confirmed:"The relevant travel bookings have been confirmed. Please keep the confirmations accessible and review the dates and traveller details carefully.",
+ trip_in_progress:"Your planned travel period is now in progress. Please follow the confirmed itinerary and contact your counsellor if you need assistance with the arrangements made through Quorista.",
+ trip_completed:"The planned travel period has been marked complete. We hope your journey went smoothly and welcome any feedback about the arrangements.",
+ awaiting_client:"We are waiting for information, documents or a decision from you before proceeding. Please check the latest request and contact your counsellor if you need clarification.",
+ on_hold:"Your case has been temporarily placed on hold. The latest update from your counsellor will explain the reason and what is needed to resume progress.",
+ completed:"The current case has been marked complete by the Quorista team. Please contact your counsellor if you need clarification or further assistance."
+};
+function progressStatusLabel(status){return PROGRESS_STATUS_LABELS[status]||String(status||"registered").replaceAll("_"," ").replace(/\b\w/g,letter=>letter.toUpperCase());}
+function progressStatusOptions(groups,current){
+ const known=new Set(groups.flatMap(group=>group[1]));
+ const legacy= current&&!known.has(current)?[[ "Existing status", [current] ]]:[];
+ return [...groups,...legacy].map(([group,values])=>'<optgroup label="'+esc(group)+'">'+values.map(value=>'<option value="'+value+'" '+(current===value?"selected":"")+'>'+esc(progressStatusLabel(value))+'</option>').join("")+'</optgroup>').join("");
+}
+
 function showWorkspaceView(view){
  const allowed=["overview","clients","cases","followups","team"];
  const selected=allowed.includes(view)?view:"overview";
@@ -238,17 +323,16 @@ async function loadCases(){
    root.innerHTML=shown.map(a=>{
     const choices=staff.filter(s=>(s.services||[]).includes(a.applicationType)).map(s=>'<option value="'+esc(s.uid)+'" '+(a.assignedCounsellorUid===s.uid?'selected':'')+'>'+esc(s.fullName)+' · '+esc(servicesLabel(s.services))+'</option>').join("");
     const assignment=isAdmin?'<label>Assign counsellor<select data-assign="'+esc(a.id)+'"><option value="">Unassigned</option>'+choices+'</select></label>':'';
-    const studyStatuses=["registered","submitted","under_review","counselling_scheduled","profile_assessment","university_shortlisting","university_application","offer_received","deposit_pending","visa_documentation","visa_submitted","visa_decision","pre_departure","awaiting_client","completed","on_hold"];
-    const tourismStatuses=["registered","submitted","under_review","consultation_scheduled","itinerary_planning","documents_pending","visa_documentation","visa_submitted","visa_decision","travel_ready","awaiting_client","completed","on_hold"];
-    const statusOptions=(a.applicationType==="tourism"?tourismStatuses:studyStatuses).map(v=>'<option value="'+v+'" '+((a.progressStatus||"registered")===v?"selected":"")+'>'+v.replaceAll("_"," ")+'</option>').join("");
+    const statusGroups=a.applicationType==="tourism"?TOURISM_PROGRESS_STAGES:STUDY_PROGRESS_STAGES;
+    const statusOptions=progressStatusOptions(statusGroups,a.progressStatus||"registered");
     const privateNotes=(notesByApplication.get(a.id)||[]).sort((x,y)=>{const xv=x.createdAt?.toMillis?x.createdAt.toMillis():0,yv=y.createdAt?.toMillis?y.createdAt.toMillis():0;return yv-xv;});
     const privateNotesMarkup=privateNotes.length?'<details class="private-notes"><summary>Private counsellor notes ('+privateNotes.length+')</summary>'+privateNotes.map(n=>'<div class="private-note-entry"><p>'+esc(n.note)+'</p><small>'+esc(formatCaseDate(n.createdAt))+'</small></div>').join("")+'</details>':'<p class="private-notes-empty">No internal notes recorded yet.</p>';
-    return '<article class="case-item"><div class="item-head"><div><strong>'+esc(a.applicantFullName||"Study Abroad applicant")+'</strong><br><small>'+esc(a.applyingFor||"Myself")+' · '+esc(a.applicationType==="study_abroad"?"Study Abroad":a.applicationType)+'</small></div><span class="pill">'+esc((a.progressStatus||"registered").replaceAll("_"," "))+'</span></div><div class="case-meta"><span class="muted">Submitted: '+esc(formatCaseDate(a.createdAt))+'</span><span class="muted">Counsellor: '+esc(a.assignedCounsellorName||"Not assigned")+'</span></div>'+caseDetailsMarkup(a)+privateNotesMarkup+'<details class="case-update-panel"><summary>Update case progress <span>Open to change the client-visible stage, share an update or schedule a follow-up</span></summary><div class="case-controls">'+assignment+
+    return '<article class="case-item"><div class="item-head"><div><strong>'+esc(a.applicantFullName||"Study Abroad applicant")+'</strong><br><small>'+esc(a.applyingFor||"Myself")+' · '+esc(a.applicationType==="study_abroad"?"Study Abroad":a.applicationType)+'</small></div><span class="pill">'+esc(progressStatusLabel(a.progressStatus||"registered"))+'</span></div><div class="case-meta"><span class="muted">Submitted: '+esc(formatCaseDate(a.createdAt))+'</span><span class="muted">Counsellor: '+esc(a.assignedCounsellorName||"Not assigned")+'</span></div>'+caseDetailsMarkup(a)+privateNotesMarkup+'<details class="case-update-panel"><summary>Update case progress <span>Open to change the client-visible stage, share an update or schedule a follow-up</span></summary><div class="case-controls">'+assignment+
     '<label>Progress status<select data-status="'+esc(a.id)+'">'+statusOptions+'</select></label>'+
-    '<div class="case-university-fields '+((a.progressStatus||"").includes("university_application")?"":"hidden")+'" data-university-fields="'+esc(a.id)+'"><strong>University application details</strong>'+
+    '<div class="case-university-fields '+(UNIVERSITY_PROGRESS_STATUSES.includes(a.progressStatus||"")?"":"hidden")+'" data-university-fields="'+esc(a.id)+'"><strong>University application details</strong>'+
     '<label>University name<input data-university-name="'+esc(a.id)+'" value="'+esc(a.universityDetails?.universityName||"")+'" placeholder="University name"></label>'+
     '<label>Country<input data-university-country="'+esc(a.id)+'" value="'+esc(a.universityDetails?.country||"")+'" placeholder="Country"></label>'+
-    '<label>Program level<input data-university-level="'+esc(a.id)+'" value="'+esc(a.universityDetails?.programLevel||"")+'" placeholder="Undergraduate / Postgraduate"></label>'+
+    '<label>Course / programme<input data-university-level="'+esc(a.id)+'" value="'+esc(a.universityDetails?.programLevel||"")+'" placeholder="e.g. MSc Data Science / BBA"></label>'+
     '<label>Intake<input data-university-intake="'+esc(a.id)+'" value="'+esc(a.universityDetails?.intake||"")+'" placeholder="Month and year"></label></div>'+
     '<label>Client-visible progress update<textarea data-note="'+esc(a.id)+'" placeholder="A suggested update will be generated automatically if left blank">'+esc(a.progressUpdate||"")+'</textarea></label>'+
     '<label>Private internal note<textarea data-internal-note="'+esc(a.id)+'" placeholder="Only authorised staff can read this note"></textarea></label>'+
@@ -282,7 +366,7 @@ async function loadCases(){
    }));
    root.querySelectorAll("[data-status]").forEach(el=>el.addEventListener("change",()=>{
     const fields=root.querySelector('[data-university-fields="'+el.dataset.status+'"]');
-    if(fields)fields.classList.toggle("hidden",el.value!=="university_application");
+    if(fields)fields.classList.toggle("hidden",!UNIVERSITY_PROGRESS_STATUSES.includes(el.value));
    }));
    root.querySelectorAll("[data-save]").forEach(btn=>btn.addEventListener("click",async()=>{
     const id=btn.dataset.save,record=records.find(item=>item.id===id);btn.disabled=true;btn.textContent="Saving…";
@@ -294,27 +378,17 @@ async function loadCases(){
       programLevel:root.querySelector('[data-university-level="'+id+'"]')?.value.trim()||"",
       intake:root.querySelector('[data-university-intake="'+id+'"]')?.value.trim()||""
      };
-     const statusLabels={
-      submitted:"Your application has been received by Quorista. Our team will review the information and contact you about the next steps.",
-      under_review:"Your application is currently under review by the Quorista team.",
-      counselling_scheduled:"A counselling discussion is being arranged for your application.",
-      profile_assessment:"Your academic and personal profile is being assessed.",
-      university_shortlisting:"We are reviewing suitable university and course options for your preferences.",
-      university_application:"Your university application is currently in progress. Our team is coordinating the required application steps and will keep you informed of any developments.",
-      offer_received:"An admission decision or offer has been received. Your counsellor will guide you through the next steps.",
-      deposit_pending:"The next step involves reviewing the university deposit requirements and deadlines.",
-      visa_documentation:"We are working through the documentation requirements for your visa stage.",
-      visa_submitted:"Your visa application has been submitted. We will share further updates when available.",
-      visa_decision:"Your visa application is awaiting a decision from the relevant authorities.",
-      pre_departure:"Your case has reached the pre-departure preparation stage.",
-      consultation_scheduled:"A tourism consultation is being arranged for your travel requirements.",
-      itinerary_planning:"Your travel preferences are being reviewed and your itinerary is being planned.",
-      documents_pending:"Some travel or visa documents are pending review or submission.",
-      travel_ready:"Your travel preparation has reached the final readiness stage.",
-      awaiting_client:"We need some information or documents from you before we can proceed. Please contact your counsellor.",
-      completed:"This stage of your application has been marked complete. Please contact your counsellor if you need any clarification.",
-      on_hold:"Your application has temporarily been placed on hold. Your counsellor will contact you about the next steps."
-     };
+     const manual=root.querySelector('[data-note="'+id+'"]').value.trim();
+     const hasUniversityDetails=UNIVERSITY_PROGRESS_STATUSES.includes(status);
+     if(hasUniversityDetails&&(!universityDetails.universityName||!universityDetails.country||!universityDetails.programLevel||!universityDetails.intake))throw new Error("For this university/admission stage, complete the university, country, course / programme and intake details before saving.");
+     let clientMessage=manual||CLIENT_STATUS_MESSAGES[status]||"Your case progress has been updated by the Quorista team.";
+     if(hasUniversityDetails){
+      const levelLabels={bachelors:"Bachelor's",bachelor:"Bachelor's",masters:"Master's",master:"Master's",phd:"PhD",doctorate:"doctoral"};
+      const rawLevel=universityDetails.programLevel.trim();
+      const level=levelLabels[rawLevel.toLowerCase()]||rawLevel;
+      const context="University: "+universityDetails.universityName+" · Country: "+universityDetails.country+" · Course: "+level+" · Intake: "+universityDetails.intake+". ";
+      clientMessage=context+clientMessage;
+     }
      const manual=root.querySelector('[data-note="'+id+'"]').value.trim();
      let clientMessage=manual||statusLabels[status]||"Your application status has been updated.";
      if(status==="university_application"){
@@ -330,9 +404,9 @@ async function loadCases(){
      const internal=root.querySelector('[data-internal-note="'+id+'"]').value.trim();
      const batch=writeBatch(db);
      const patch={progressStatus:status,progressUpdate:clientMessage,lastProgressUpdatedAt:serverTimestamp(),updatedAt:serverTimestamp()};
-     if(status==="university_application")patch.universityDetails=universityDetails;
+     if(hasUniversityDetails)patch.universityDetails=universityDetails;
      batch.update(doc(db,"applications",id),patch);
-     batch.set(doc(collection(db,"status_updates")),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,status,clientMessage,universityDetails:status==="university_application"?universityDetails:null,createdByUid:currentUser.uid,createdAt:serverTimestamp()});
+     batch.set(doc(collection(db,"status_updates")),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,status,clientMessage,universityDetails:hasUniversityDetails?universityDetails:null,createdByUid:currentUser.uid,createdAt:serverTimestamp()});
      if(internal)batch.set(doc(collection(db,"internal_notes")),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,assignedCounsellorUid:record.assignedCounsellorUid||currentUser.uid,note:internal,createdByUid:currentUser.uid,createdAt:serverTimestamp()});
      if(followDate&&followAction)batch.set(doc(collection(db,"follow_ups")),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,assignedCounsellorUid:record.assignedCounsellorUid||currentUser.uid,followUpDate:followDate,action:followAction,status:"open",createdByUid:currentUser.uid,createdAt:serverTimestamp()});
      await batch.commit();
