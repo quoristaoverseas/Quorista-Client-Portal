@@ -349,6 +349,14 @@ async function loadClientProgress() {
       return;
     }
     const updateSnapshot = await getDocs(query(collection(db, "status_updates"), where("clientUid", "==", applicationUser.uid)));
+    const cycleSnapshot = await getDocs(query(collection(db, "progress_cycles"), where("clientUid", "==", applicationUser.uid)));
+    const cyclesByApplication = new Map();
+    cycleSnapshot.docs.forEach(cycleDoc => {
+      const cycle = { id: cycleDoc.id, ...cycleDoc.data() };
+      const bucket = cyclesByApplication.get(cycle.applicationId) || [];
+      bucket.push(cycle);
+      cyclesByApplication.set(cycle.applicationId, bucket);
+    });
     const updatesByApplication = new Map();
     updateSnapshot.docs.forEach(updateDoc => {
       const update = updateDoc.data();
@@ -381,11 +389,27 @@ async function loadClientProgress() {
       snapshot.docs.map(item => {
         const data = item.data();
         const serviceLabel = data.applicationType === "tourism" ? "International Tourism" : "Study Abroad";
-        const history = (updatesByApplication.get(item.id) || []).sort((x,y) => {
+        const allHistory = (updatesByApplication.get(item.id) || []).filter(entry => !entry.hiddenFromClient);
+        const currentCycleId = data.activeProgressCycleId || "";
+        const history = allHistory.filter(entry => !currentCycleId || entry.cycleId === currentCycleId).sort((x,y) => {
           const xv = x.createdAt?.toMillis ? x.createdAt.toMillis() : new Date(x.createdAt || 0).getTime();
           const yv = y.createdAt?.toMillis ? y.createdAt.toMillis() : new Date(y.createdAt || 0).getTime();
           return yv - xv;
         });
+        const archivedCycles = (cyclesByApplication.get(item.id) || []).filter(cycle => cycle.status === "archived").sort((x,y) => Number(y.cycleNumber||0)-Number(x.cycleNumber||0));
+        const legacyArchived = currentCycleId ? allHistory.filter(entry => !entry.cycleId) : [];
+        const archivedMarkup = archivedCycles.length || legacyArchived.length
+          ? '<section class="previous-cycle-section"><div class="previous-cycle-heading"><div><span class="section-kicker">EARLIER JOURNEYS</span><h4>Previous application history</h4></div><span class="previous-cycle-count">'+(archivedCycles.length+(legacyArchived.length?1:0))+' archived</span></div>'+
+            archivedCycles.map(cycle => {
+              const entries = allHistory.filter(entry => entry.cycleId === cycle.id).sort((x,y) => {
+                const xv=x.createdAt?.toMillis?x.createdAt.toMillis():new Date(x.createdAt||0).getTime();
+                const yv=y.createdAt?.toMillis?y.createdAt.toMillis():new Date(y.createdAt||0).getTime();return yv-xv;
+              });
+              return '<details class="previous-cycle-card"><summary><span><strong>'+escapeApplicationHtml(cycle.label||("Application cycle "+(cycle.cycleNumber||"")) )+'</strong><small>'+escapeApplicationHtml(cycle.reason||"Previous application cycle")+'</small></span><em>Archived · '+escapeApplicationHtml(formatDate(cycle.archivedAt||cycle.createdAt))+'</em></summary>'+
+                (entries.length?'<div class="previous-cycle-entries">'+entries.map(entry=>'<article><strong>'+escapeApplicationHtml(statusLabel(entry.status))+'</strong><small>'+escapeApplicationHtml(formatDate(entry.createdAt))+'</small><p>'+escapeApplicationHtml(entry.clientMessage||"Progress update")+'</p></article>').join("")+'</div>':'<p class="muted">No client-visible updates were recorded in this cycle.</p>')+'</details>';
+            }).join("")+
+            (legacyArchived.length?'<details class="previous-cycle-card"><summary><span><strong>Earlier progress history</strong><small>Updates recorded before progress cycles were introduced</small></span><em>Archived</em></summary><div class="previous-cycle-entries">'+legacyArchived.sort((x,y)=>{const xv=x.createdAt?.toMillis?x.createdAt.toMillis():new Date(x.createdAt||0).getTime();const yv=y.createdAt?.toMillis?y.createdAt.toMillis():new Date(y.createdAt||0).getTime();return yv-xv;}).map(entry=>'<article><strong>'+escapeApplicationHtml(statusLabel(entry.status))+'</strong><small>'+escapeApplicationHtml(formatDate(entry.createdAt))+'</small><p>'+escapeApplicationHtml(entry.clientMessage||"Progress update")+'</p></article>').join("")+'</div></details>':'')+'</section>'
+          : "";
         const currentStatus = statusLabel(data.progressStatus);
         const latestMessage = data.progressUpdate || "Your case is registered. Your Quorista counsellor will contact you about the next steps.";
         const latestDate = data.lastProgressUpdatedAt || data.updatedAt || data.createdAt;
@@ -408,7 +432,7 @@ async function loadClientProgress() {
         return '<article class="client-progress-card"><div class="client-progress-card-head"><div><span class="progress-service-tag">' + escapeApplicationHtml(serviceLabel) + '</span><h4>' + escapeApplicationHtml(data.applicantFullName || "Your case") + '</h4><p>Case registered ' + escapeApplicationHtml(formatDate(data.createdAt)) + '</p></div><span class="progress-status-pill">' + escapeApplicationHtml(currentStatus) + '</span></div>' +
           '<div class="progress-summary-grid"><div><span>CURRENT STAGE</span><strong>' + escapeApplicationHtml(currentStatus) + '</strong></div><div><span>YOUR COUNSELLOR</span><strong>' + escapeApplicationHtml(data.assignedCounsellorName || "Awaiting assignment") + '</strong></div></div>' +
           '<section class="latest-progress-update"><div class="latest-update-top"><span class="section-kicker">LATEST UPDATE FROM QUORISTA</span><span>' + escapeApplicationHtml(formatDate(latestDate)) + '</span></div><p>' + escapeApplicationHtml(latestMessage) + '</p>' + latestUniversityMarkup + '</section>' +
-          historyMarkup + '</article>';
+          historyMarkup + archivedMarkup + '</article>';
       }).join("");
   } catch (error) {
     console.error("Could not load client progress:", error);
