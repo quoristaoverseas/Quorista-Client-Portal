@@ -243,3 +243,19 @@ footer span{font-size:.68rem}
 .case-update-panel .case-university-fields{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:13px;border:1px solid #e9e5f3;border-radius:10px;background:#fff}.case-update-panel .case-university-fields>strong{grid-column:1/-1;color:#5545a0;font:800 .72rem Manrope}.case-update-panel .case-followup-fields{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.case-update-panel .case-save-button{grid-column:1/-1;justify-self:start;min-width:190px}
 .staff-save-toast{position:fixed;right:24px;bottom:24px;z-index:1000;max-width:min(420px,calc(100vw - 32px));padding:14px 18px;border:1px solid #cce8d9;border-radius:12px;background:#effaf3;color:#216747;font-size:.78rem;font-weight:700;box-shadow:0 16px 40px rgba(20,60,40,.14);opacity:0;transform:translateY(10px);pointer-events:none;transition:opacity .2s,transform .2s}.staff-save-toast.visible{opacity:1;transform:translateY(0)}
 @media(max-width:680px){.case-update-panel>summary{align-items:flex-start;flex-wrap:wrap}.case-update-panel>summary span{width:100%;margin:0;text-align:left}.case-update-panel .case-controls,.case-update-panel .case-university-fields,.case-update-panel .case-followup-fields{grid-template-columns:1fr}.case-update-panel .case-university-fields,.case-update-panel .case-followup-fields{grid-column:auto}.case-update-panel .case-save-button{width:100%}}
+
+/* Progress cycle and update visibility management */
+.progress-admin-history,.case-cycle-panel{margin-top:10px;border:1px solid #e8e3f2;border-radius:12px;background:#fff;overflow:hidden}
+.progress-admin-history>summary,.case-cycle-panel>summary{padding:12px 14px;cursor:pointer;color:#51428f;font-size:.76rem;font-weight:800;list-style:none}
+.progress-admin-history>summary::-webkit-details-marker,.case-cycle-panel>summary::-webkit-details-marker{display:none}
+.progress-admin-history[open]>summary,.case-cycle-panel[open]>summary{background:#f8f6ff;border-bottom:1px solid #eee9f7}
+.progress-admin-entry{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 14px;border-bottom:1px solid #f0edf5}
+.progress-admin-entry:last-child{border-bottom:0}.progress-admin-entry>div{min-width:0;flex:1}
+.progress-admin-entry strong{display:block;color:#21194f;font-size:.76rem}.progress-admin-entry p{margin:4px 0;color:#69647c;font-size:.72rem;overflow-wrap:anywhere}
+.progress-admin-entry small{color:#938da5;font-size:.65rem}.progress-admin-entry button{flex-shrink:0;font-size:.68rem}
+.danger-outline{border-color:#f0c8c8!important;color:#a23c3c!important;background:#fff!important}
+.case-cycle-controls{display:grid;gap:11px;padding:14px}.case-cycle-controls p{margin:0;color:#77718c;font-size:.74rem}
+.case-cycle-controls label{display:grid;gap:5px;color:#514b68;font-size:.7rem;font-weight:700}
+.case-cycle-controls select,.case-cycle-controls textarea{width:100%;border:1px solid #ded9eb;border-radius:9px;padding:10px;background:#fff;color:#21194f;font:inherit}
+.case-cycle-controls textarea{min-height:65px}.case-cycle-controls button{justify-self:start}
+@media(max-width:680px){.progress-admin-entry{align-items:flex-start;flex-direction:column}.progress-admin-entry button,.case-cycle-controls button{width:100%}}
