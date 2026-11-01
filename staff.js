@@ -293,8 +293,15 @@ async function loadCases(){
    const noteBatches=await Promise.all(permitted.map(service=>getDocs(query(collection(db,"internal_notes"),where("assignedCounsellorUid","==",currentUser.uid),where("applicationType","==",service)))));
    noteDocs=noteBatches.flatMap(batch=>batch.docs);
   }
-  let progressUpdateDocs=[];
-  if(isAdmin){const progressSnap=await getDocs(collection(db,"status_updates"));progressUpdateDocs=progressSnap.docs.map(d=>({id:d.id,...d.data()}));}
+  let progressUpdateDocs=[],progressCycleDocs=[];
+  if(isAdmin){
+   const [progressSnap,cycleSnap]=await Promise.all([getDocs(collection(db,"status_updates")),getDocs(collection(db,"progress_cycles"))]);
+   progressUpdateDocs=progressSnap.docs.map(d=>({id:d.id,...d.data()}));
+   progressCycleDocs=cycleSnap.docs.map(d=>({id:d.id,...d.data()}));
+  }else{
+   const cycleBatches=await Promise.all((staffProfile?.services||[]).map(service=>getDocs(query(collection(db,"progress_cycles"),where("assignedCounsellorUid","==",currentUser.uid),where("applicationType","==",service)))));
+   progressCycleDocs=cycleBatches.flatMap(batch=>batch.docs.map(d=>({id:d.id,...d.data()})));
+  }
   const notesByApplication=new Map();
   noteDocs.forEach(noteDoc=>{const note=noteDoc.data();const bucket=notesByApplication.get(note.applicationId)||[];bucket.push(note);notesByApplication.set(note.applicationId,bucket);});
 
@@ -333,10 +340,12 @@ async function loadCases(){
      const xv=x.createdAt?.toMillis?x.createdAt.toMillis():new Date(x.createdAt||0).getTime();
      const yv=y.createdAt?.toMillis?y.createdAt.toMillis():new Date(y.createdAt||0).getTime();return yv-xv;
     });
+    const caseCycles=progressCycleDocs.filter(cycle=>cycle.applicationId===a.id).sort((x,y)=>Number(y.cycleNumber||0)-Number(x.cycleNumber||0));
+    const cycleHistoryMarkup=caseCycles.length?'<details class="progress-admin-history"><summary>Application cycle history ('+caseCycles.length+')</summary>'+caseCycles.map(cycle=>'<div class="progress-admin-entry"><div><strong>'+esc(cycle.label||("Application cycle "+(cycle.cycleNumber||"")))+' · '+esc(cycle.status||"active")+'</strong><p>'+esc(cycle.reason||"No reason recorded")+'</p><small>'+esc(formatCaseDate(cycle.archivedAt||cycle.createdAt))+'</small></div></div>').join("")+'</details>':'';
     const updateManagementMarkup=isAdmin?'<details class="progress-admin-history"><summary>Manage client-visible updates ('+caseUpdates.length+')</summary>'+
      (caseUpdates.length?caseUpdates.map(update=>'<div class="progress-admin-entry"><div><strong>'+esc(progressStatusLabel(update.status))+'</strong><p>'+esc(update.clientMessage||"Progress update")+'</p><small>'+esc(formatCaseDate(update.createdAt))+'</small></div><button type="button" class="secondary '+(update.hiddenFromClient?"":"danger-outline")+'" data-toggle-update="'+esc(update.id)+'" data-hidden="'+(update.hiddenFromClient?"true":"false")+'">'+(update.hiddenFromClient?"Restore for client":"Hide from client")+'</button></div>').join(""):'<p class="muted">No progress updates have been posted yet.</p>')+'</details>':'';
 
-    return '<article class="case-item"><div class="item-head"><div><strong>'+esc(a.applicantFullName||"Study Abroad applicant")+'</strong><br><small>'+esc(a.applyingFor||"Myself")+' · '+esc(a.applicationType==="study_abroad"?"Study Abroad":a.applicationType)+'</small></div><span class="pill">'+esc(progressStatusLabel(a.progressStatus||"registered"))+'</span></div><div class="case-meta"><span class="muted">Submitted: '+esc(formatCaseDate(a.createdAt))+'</span><span class="muted">Counsellor: '+esc(a.assignedCounsellorName||"Not assigned")+'</span></div>'+caseDetailsMarkup(a)+privateNotesMarkup+updateManagementMarkup+'<details class="case-update-panel"><summary>Update case progress <span>Open to change the client-visible stage, share an update or schedule a follow-up</span></summary><div class="case-controls">'+assignment+
+    return '<article class="case-item"><div class="item-head"><div><strong>'+esc(a.applicantFullName||"Study Abroad applicant")+'</strong><br><small>'+esc(a.applyingFor||"Myself")+' · '+esc(a.applicationType==="study_abroad"?"Study Abroad":a.applicationType)+'</small></div><span class="pill">'+esc(progressStatusLabel(a.progressStatus||"registered"))+'</span></div><div class="case-meta"><span class="muted">Submitted: '+esc(formatCaseDate(a.createdAt))+'</span><span class="muted">Counsellor: '+esc(a.assignedCounsellorName||"Not assigned")+'</span></div>'+caseDetailsMarkup(a)+privateNotesMarkup+cycleHistoryMarkup+updateManagementMarkup+'<details class="case-update-panel"><summary>Update case progress <span>Open to change the client-visible stage, share an update or schedule a follow-up</span></summary><div class="case-controls">'+assignment+
     '<label>Progress status<select data-status="'+esc(a.id)+'">'+statusOptions+'</select></label>'+
     '<div class="case-university-fields '+(UNIVERSITY_PROGRESS_STATUSES.includes(a.progressStatus||"")?"":"hidden")+'" data-university-fields="'+esc(a.id)+'"><strong>University application details</strong>'+
     '<label>University name<input data-university-name="'+esc(a.id)+'" value="'+esc(a.universityDetails?.universityName||"")+'" placeholder="University name"></label>'+
