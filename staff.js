@@ -6,7 +6,7 @@ const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),$
 const ADMIN_UID="oqgmvKDsJQc7WdDcjOVi5YIohAj1";
 // Set this after deploying the separate notification Google Apps Script.
 // Never place a Gmail password, service-account key or private credential here.
-const CLIENT_NOTIFICATION_ENDPOINT="PASTE_DEPLOYED_APPS_SCRIPT_WEB_APP_URL_HERE";
+const CLIENT_NOTIFICATION_ENDPOINT="https://script.google.com/macros/s/AKfycbxJqZpkpKks-ZB4ZYIHSDSCEZNmyVeo4IUOylEA26zVbIBffGbqDgWPl0qdSkNvzPqr/exec";
 async function requestClientProgressEmail(applicationId,eventId){
  if(!CLIENT_NOTIFICATION_ENDPOINT||CLIENT_NOTIFICATION_ENDPOINT.includes("PASTE_DEPLOYED")){
   console.info("Client email notifications are not enabled yet. The case update was saved normally.");
