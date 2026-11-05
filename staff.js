@@ -4,6 +4,27 @@ import {getFirestore,doc,getDoc,setDoc,collection,getDocs,query,where,updateDoc,
 import {firebaseConfig} from "./firebase-config.js";
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),$=id=>document.getElementById(id);
 const ADMIN_UID="oqgmvKDsJQc7WdDcjOVi5YIohAj1";
+// Set this after deploying the separate notification Google Apps Script.
+// Never place a Gmail password, service-account key or private credential here.
+const CLIENT_NOTIFICATION_ENDPOINT="https://script.google.com/macros/s/AKfycbxJqZpkpKks-ZB4ZYIHSDSCEZNmyVeo4IUOylEA26zVbIBffGbqDgWPl0qdSkNvzPqr/exec";
+async function requestClientProgressEmail(applicationId,eventId){
+ if(!CLIENT_NOTIFICATION_ENDPOINT||CLIENT_NOTIFICATION_ENDPOINT.includes("PASTE_DEPLOYED")){
+  console.info("Client email notifications are not enabled yet. The case update was saved normally.");
+  return;
+ }
+ try{
+  const idToken=await currentUser.getIdToken();
+  // text/plain avoids a browser CORS preflight. The endpoint independently verifies
+  // the Firebase ID token and reads authorised records through Firestore Security Rules.
+  await fetch(CLIENT_NOTIFICATION_ENDPOINT,{
+   method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},
+   body:JSON.stringify({action:"sendProgressUpdate",idToken,applicationId,eventId})
+  });
+ }catch(error){
+  // Notification delivery must never reverse or misreport a successful Firestore save.
+  console.warn("The case update was saved, but the email notification request could not be sent.",error);
+ }
+}
 let currentUser=null,staffProfile=null,isAdmin=false;
 $("year").textContent=new Date().getFullYear();
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -413,8 +434,11 @@ async function loadCases(){
      batch.set(cycleRef,{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,cycleNumber,label:"Application cycle "+cycleNumber,reason:detail,status:"active",createdByUid:currentUser.uid,assignedCounsellorUid:record.assignedCounsellorUid||currentUser.uid,createdAt:serverTimestamp()});
      const clientMessage="A new application progress cycle has been started. Reason: "+detail+". Your previous progress history has been archived and remains available separately. Your counsellor will guide you through the next steps.";
      batch.update(doc(db,"applications",id),{activeProgressCycleId:cycleRef.id,progressCycleNumber:cycleNumber,progressStatus:"registered",progressUpdate:clientMessage,universityDetails:deleteField(),lastProgressUpdatedAt:serverTimestamp(),updatedAt:serverTimestamp()});
-     batch.set(doc(collection(db,"status_updates")),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,cycleId:cycleRef.id,status:"registered",clientMessage,createdByUid:currentUser.uid,assignedCounsellorUid:record.assignedCounsellorUid||currentUser.uid,createdAt:serverTimestamp()});
-     await batch.commit();await loadCases();showStaffToast("New progress cycle started. Previous history has been archived.");
+     const updateRef=doc(collection(db,"status_updates"));
+     batch.set(updateRef,{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,cycleId:cycleRef.id,status:"registered",clientMessage,createdByUid:currentUser.uid,assignedCounsellorUid:record.assignedCounsellorUid||currentUser.uid,createdAt:serverTimestamp()});
+     await batch.commit();
+     await requestClientProgressEmail(id,updateRef.id);
+     await loadCases();showStaffToast("New progress cycle started. Previous history has been archived.");
     }catch(error){alert("Could not start a new progress cycle: "+error.message);button.disabled=false;button.textContent="Archive current cycle & start new";}
    }));
    root.querySelectorAll("[data-save]").forEach(btn=>btn.addEventListener("click",async()=>{
@@ -451,10 +475,12 @@ async function loadCases(){
      const patch={progressStatus:status,progressUpdate:clientMessage,lastProgressUpdatedAt:serverTimestamp(),updatedAt:serverTimestamp(),activeProgressCycleId:cycleId,progressCycleNumber:record.progressCycleNumber||1};
      if(hasUniversityDetails)patch.universityDetails=universityDetails;
      batch.update(doc(db,"applications",id),patch);
-     batch.set(doc(collection(db,"status_updates")),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,cycleId,status,clientMessage,universityDetails:hasUniversityDetails?universityDetails:null,createdByUid:currentUser.uid,assignedCounsellorUid:record.assignedCounsellorUid||currentUser.uid,createdAt:serverTimestamp()});
+     const updateRef=doc(collection(db,"status_updates"));
+     batch.set(updateRef,{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,cycleId,status,clientMessage,universityDetails:hasUniversityDetails?universityDetails:null,createdByUid:currentUser.uid,assignedCounsellorUid:record.assignedCounsellorUid||currentUser.uid,createdAt:serverTimestamp()});
      if(internal)batch.set(doc(collection(db,"internal_notes")),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,assignedCounsellorUid:record.assignedCounsellorUid||currentUser.uid,note:internal,createdByUid:currentUser.uid,createdAt:serverTimestamp()});
      if(followDate&&followAction)batch.set(doc(collection(db,"follow_ups")),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,assignedCounsellorUid:record.assignedCounsellorUid||currentUser.uid,followUpDate:followDate,action:followAction,status:"open",createdByUid:currentUser.uid,createdAt:serverTimestamp()});
      await batch.commit();
+     await requestClientProgressEmail(id,updateRef.id);
      await loadCases();
      showStaffToast("Case update saved successfully. The update panel has been closed.");
     }catch(e){alert("Could not save update: "+e.message);btn.disabled=false;btn.textContent="Save case update";}
