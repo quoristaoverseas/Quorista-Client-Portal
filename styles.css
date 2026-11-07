@@ -187,3 +187,67 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .previous-cycle-entries article strong{color:#4f408e;font-size:.74rem}.previous-cycle-entries article small{float:right;color:#8a849d;font-size:.65rem}
 .previous-cycle-entries article p{margin:5px 0 0;color:#5f5a73;font-size:.72rem;line-height:1.6;overflow-wrap:anywhere}
 @media(max-width:600px){.previous-cycle-card>summary{align-items:flex-start;flex-direction:column}.previous-cycle-entries article small{float:none;display:block;margin-top:3px}}
+
+
+/* Mobile refinement pass — preserve portal behaviour and existing visual system. */
+html, body { max-width:100%; }
+body { overflow-x:hidden; }
+img, svg, video, iframe { max-width:100%; }
+.dashboard, .dashboard-main, .dashboard-sidebar, .content-panel,
+.auth-card, .application-form-panel, .client-progress-card { min-width:0; }
+.dashboard *, .content-panel *, .client-progress-card * { overflow-wrap:anywhere; }
+button, a, input, select, textarea { touch-action:manipulation; }
+@media (max-width:760px) {
+  body.dashboard-active .hero { min-height:100svh; }
+  .dashboard { width:100%; max-width:100%; }
+  .dashboard-main { min-width:0; }
+  .dashboard-heading { min-width:0; flex-wrap:wrap; }
+  .welcome-banner { overflow:hidden; }
+  .welcome-copy { max-width:min(100%, 420px); position:relative; z-index:1; }
+  .overview-grid > *, .detail-grid > *, .application-layout > *,
+  .application-review > *, .application-fields-grid > * { min-width:0; }
+  .content-panel, .application-form-panel { max-width:100%; }
+  .application-actions { gap:10px; }
+  .application-actions button { min-height:44px; }
+}
+@media (max-width:600px) {
+  .container, .nav-wrap { width:calc(100% - 32px); }
+  .site-header { padding-top:max(10px, env(safe-area-inset-top)); }
+  .nav-wrap { gap:10px; }
+  .brand img { max-width:min(48vw, 175px); height:42px; }
+  .nav-cta { min-height:42px; display:inline-flex; align-items:center; justify-content:center; white-space:nowrap; }
+  .hero-inner { min-width:0; }
+  .hero h1 { max-width:100%; overflow-wrap:anywhere; }
+  .auth-card { width:100%; max-width:100%; padding:22px 18px; }
+  .auth-card input, .auth-card select, .auth-card textarea,
+  .application-form-panel input, .application-form-panel select,
+  .application-form-panel textarea, .content-panel input,
+  .content-panel select, .content-panel textarea {
+    width:100%; min-width:0; max-width:100%; min-height:46px;
+    font-size:16px; line-height:1.4;
+  }
+  .auth-card button, .application-form-panel button,
+  .content-panel button { min-height:44px; }
+  .application-actions > div { min-width:0; }
+  .application-actions > div button { min-width:0; padding-left:10px; padding-right:10px; }
+  .application-list-item { min-width:0; }
+  .application-private, .secure-pill { max-width:100%; }
+  .dashboard-mobile-brand { min-width:0; gap:10px; flex-wrap:wrap; }
+  .dashboard-mobile-title { min-width:0; }
+  .dashboard-mobile-title img { max-width:116px; height:auto; }
+  .dashboard-main { padding-left:14px; padding-right:14px; }
+  .content-panel { padding:18px 15px; }
+  .client-progress-card { padding:16px; }
+  .progress-summary-grid, .university-update-grid { grid-template-columns:minmax(0,1fr); }
+  .latest-update-top, .timeline-entry-meta { align-items:flex-start; }
+  .previous-cycle-card, .previous-cycle-card > summary { min-width:0; }
+}
+@media (max-width:380px) {
+  .container, .nav-wrap { width:calc(100% - 26px); }
+  .brand img { max-width:44vw; height:38px; }
+  .nav-cta { font-size:.68rem; padding:8px 10px; }
+  .hero h1 { font-size:clamp(2.1rem,11vw,2.65rem); }
+  .auth-card { padding:19px 15px; }
+  .dashboard-main { padding-left:12px; padding-right:12px; }
+  .application-form-panel, .content-panel { padding:15px 12px; }
+}
