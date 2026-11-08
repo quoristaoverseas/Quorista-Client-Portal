@@ -259,3 +259,24 @@ footer span{font-size:.68rem}
 .case-cycle-controls select,.case-cycle-controls textarea{width:100%;border:1px solid #ded9eb;border-radius:9px;padding:10px;background:#fff;color:#21194f;font:inherit}
 .case-cycle-controls textarea{min-height:65px}.case-cycle-controls button{justify-self:start}
 @media(max-width:680px){.progress-admin-entry{align-items:flex-start;flex-direction:column}.progress-admin-entry button,.case-cycle-controls button{width:100%}}
+
+/* Mobile audit hardening — private staff workspace within the client portal. */
+html, body { max-width:100%; overflow-x:clip; }
+.staff-shell, .staff-main, .staff-header, .staff-content, .staff-card,
+.case-card, .case-detail, .client-detail, .case-controls, .case-update-panel,
+.progress-admin-history, .case-cycle-panel { min-width:0; max-width:100%; }
+.staff-shell img, .staff-shell svg { max-width:100%; }
+.staff-shell h1, .staff-shell h2, .staff-shell h3, .staff-shell p,
+.staff-shell a, .staff-shell label, .staff-shell td, .staff-shell th { overflow-wrap:anywhere; }
+.staff-shell input, .staff-shell select, .staff-shell textarea, .staff-shell button { max-width:100%; min-width:0; }
+@media (max-width:760px) {
+  .staff-shell table { display:block; width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .staff-shell .staff-header, .staff-shell .case-header { flex-wrap:wrap; }
+  .staff-shell .case-actions, .staff-shell .staff-actions { flex-wrap:wrap; }
+}
+@media (max-width:620px) {
+  .staff-shell { padding-left:12px; padding-right:12px; }
+  .staff-shell button, .staff-shell a.button, .staff-shell input, .staff-shell select { min-height:44px; }
+  .staff-shell .case-actions button, .staff-shell .staff-actions button { flex:1 1 100%; }
+  .staff-shell .staff-card, .staff-shell .case-card { padding:15px; }
+}
