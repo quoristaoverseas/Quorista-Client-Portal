@@ -261,22 +261,34 @@ footer span{font-size:.68rem}
 @media(max-width:680px){.progress-admin-entry{align-items:flex-start;flex-direction:column}.progress-admin-entry button,.case-cycle-controls button{width:100%}}
 
 /* Mobile audit hardening — private staff workspace within the client portal. */
-html, body { max-width:100%; overflow-x:clip; }
-.staff-shell, .staff-main, .staff-header, .staff-content, .staff-card,
-.case-card, .case-detail, .client-detail, .case-controls, .case-update-panel,
+html, body { width:100%; max-width:100%; overflow-x:clip; }
+header, main, .login-card, .workspace-shell, .workspace-sidebar, .workspace-main,
+.topline, .panel, .case-card, .client-card, .case-update-panel,
 .progress-admin-history, .case-cycle-panel { min-width:0; max-width:100%; }
-.staff-shell img, .staff-shell svg { max-width:100%; }
-.staff-shell h1, .staff-shell h2, .staff-shell h3, .staff-shell p,
-.staff-shell a, .staff-shell label, .staff-shell td, .staff-shell th { overflow-wrap:anywhere; }
-.staff-shell input, .staff-shell select, .staff-shell textarea, .staff-shell button { max-width:100%; min-width:0; }
+img, svg { max-width:100%; }
+h1, h2, h3, h4, p, a, label, small, strong, td, th { overflow-wrap:anywhere; }
+input, select, textarea, button { max-width:100%; min-width:0; }
 @media (max-width:760px) {
-  .staff-shell table { display:block; width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
-  .staff-shell .staff-header, .staff-shell .case-header { flex-wrap:wrap; }
-  .staff-shell .case-actions, .staff-shell .staff-actions { flex-wrap:wrap; }
+  .workspace-shell { grid-template-columns:minmax(0,1fr); }
+  .workspace-sidebar { width:100%; }
+  .workspace-main { width:100%; }
+  .topline, .case-header, .case-actions, .staff-actions { flex-wrap:wrap; }
+  .workspace-main table { display:block; width:100%; max-width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
 }
 @media (max-width:620px) {
-  .staff-shell { padding-left:12px; padding-right:12px; }
-  .staff-shell button, .staff-shell a.button, .staff-shell input, .staff-shell select { min-height:44px; }
-  .staff-shell .case-actions button, .staff-shell .staff-actions button { flex:1 1 100%; }
-  .staff-shell .staff-card, .staff-shell .case-card { padding:15px; }
+  header { padding-left:14px; padding-right:14px; gap:10px; }
+  .brand { min-width:0; max-width:65%; font-size:.72rem; }
+  .brand img { max-width:44px; height:auto; }
+  .header-label { text-align:right; font-size:.55rem; }
+  main { width:calc(100% - 24px); margin:22px auto 40px; }
+  .login-card { padding:22px 17px; }
+  button, input:not([type=checkbox]), select, textarea { min-height:44px; }
+  .workspace-main { padding-bottom:max(20px, env(safe-area-inset-bottom)); }
+  .panel, .case-update-panel, .case-cycle-panel { padding:14px; }
+  .case-actions button, .staff-actions button { flex:1 1 100%; }
+}
+@media (max-width:360px) {
+  .brand { font-size:.62rem; letter-spacing:.04em; }
+  .header-label { font-size:.5rem; letter-spacing:.06em; }
+  .login-card { padding:19px 14px; }
 }
