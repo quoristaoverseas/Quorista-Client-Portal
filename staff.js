@@ -491,7 +491,7 @@ async function loadCases(){
  }catch(e){console.error(e);root.innerHTML='<div class="empty">Applications could not be loaded. Check the published Firestore rules and try again.</div>';}
 }
 
-async async function loadFollowUps(){
+async function loadFollowUps(){
  const root=$("follow-up-list");
  if(!root)return;
  root.innerHTML='<p class="muted">Loading follow-ups…</p>';
