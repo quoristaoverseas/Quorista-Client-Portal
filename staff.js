@@ -234,6 +234,22 @@ async function loadClientDirectory(){
    const date=formatCaseDate(c.createdAt);
    return '<article class="client-directory-card" data-client-card="'+esc(c.uid)+'"><div class="item-head"><div><strong>'+esc(c.fullName||"Client")+'</strong><br><small>Registered '+esc(date)+'</small></div>'+assigned+'</div><div class="client-directory-meta"><div><span>EMAIL</span>'+email+'</div><div><span>PHONE / WHATSAPP</span>'+phone+'</div><div><span>QUESTIONNAIRE</span><strong>Optional · '+(c.questionnaireCompleted?"Completed":"Not completed")+'</strong></div><div><span>ACCOUNT</span><strong>Active client</strong></div></div>'+assignmentControl+'</article>';
   }).join("");
+  const applyDirectorySearch=()=>{
+   const term=(directorySearch?.value||"").trim().toLowerCase();
+   const cards=[...root.querySelectorAll("[data-client-card]")];
+   let visible=0;
+   cards.forEach(card=>{
+    const match=!term||card.textContent.toLowerCase().includes(term)||card.dataset.clientCard.toLowerCase().includes(term);
+    card.hidden=!match;
+    if(match)visible++;
+   });
+   $("client-directory-count").textContent=term?visible+" of "+clients.length+" clients shown":clients.length+" registered client"+(clients.length===1?"":"s");
+   let empty=root.querySelector("[data-directory-no-results]");
+   if(!visible&&term){
+    if(!empty){empty=document.createElement("p");empty.className="empty";empty.dataset.directoryNoResults="true";empty.textContent="No clients match your search. Try a different name, email, phone number or UID.";root.appendChild(empty);}
+   }else if(empty)empty.remove();
+  };
+  directorySearch?.addEventListener("input",applyDirectorySearch);
   root.querySelectorAll("[data-client-save]").forEach(button=>button.addEventListener("click",async()=>{
    const uid=button.dataset.clientSave;
    const card=button.closest("[data-client-card]");
@@ -491,7 +507,7 @@ async function loadCases(){
  }catch(e){console.error(e);root.innerHTML='<div class="empty">Applications could not be loaded. Check the published Firestore rules and try again.</div>';}
 }
 
-async async function loadFollowUps(){
+async function loadFollowUps(){
  const root=$("follow-up-list");
  if(!root)return;
  root.innerHTML='<p class="muted">Loading follow-ups…</p>';
