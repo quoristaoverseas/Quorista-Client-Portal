@@ -259,10 +259,3 @@ footer span{font-size:.68rem}
 .case-cycle-controls select,.case-cycle-controls textarea{width:100%;border:1px solid #ded9eb;border-radius:9px;padding:10px;background:#fff;color:#21194f;font:inherit}
 .case-cycle-controls textarea{min-height:65px}.case-cycle-controls button{justify-self:start}
 @media(max-width:680px){.progress-admin-entry{align-items:flex-start;flex-direction:column}.progress-admin-entry button,.case-cycle-controls button{width:100%}}
-
-
-/* Client directory search field */
-.directory-search-label{display:grid;gap:7px;max-width:520px;margin:0 0 14px;color:#77738d;font-size:.72rem;font-weight:700}
-.directory-search-label input{width:100%;min-width:0;padding:12px 14px;border:1px solid #e4e0ef;border-radius:10px;background:#fff;color:#302b52;font:500 .82rem 'DM Sans',sans-serif}
-.directory-search-label input:focus-visible{outline:3px solid rgba(255,176,32,.55);outline-offset:2px}
-[data-client-card][hidden]{display:none!important}
