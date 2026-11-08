@@ -251,3 +251,32 @@ button, a, input, select, textarea { touch-action:manipulation; }
   .dashboard-main { padding-left:12px; padding-right:12px; }
   .application-form-panel, .content-panel { padding:15px 12px; }
 }
+
+/* Mobile audit hardening — client-facing portal pages. */
+html, body { width:100%; max-width:100%; overflow-x:clip; }
+img, video, svg { max-width:100%; }
+main, header, footer, section, article, form, .container, .nav-wrap,
+.dashboard-main, .dashboard-header, .content-panel, .auth-card,
+.application-form-panel, .application-layout, .application-review,
+.application-fields-grid, .application-actions, .client-progress-card { min-width:0; }
+h1, h2, h3, h4, p, a, label, small, strong, td, th { overflow-wrap:anywhere; }
+input, select, textarea, button { max-width:100%; }
+input, select, textarea { min-width:0; }
+@media (max-width:760px) {
+  .nav-wrap { flex-wrap:wrap; }
+  .dashboard-header, .dashboard-top, .application-actions { min-width:0; }
+  .application-actions { flex-wrap:wrap; }
+  .application-actions button { flex:1 1 140px; }
+  table { display:block; width:100%; max-width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+}
+@media (max-width:600px) {
+  .container, .nav-wrap { width:calc(100% - 30px); }
+  button, .button, .nav-cta { min-height:44px; }
+  .auth-card, .content-panel, .application-form-panel { overflow-wrap:anywhere; }
+  .dashboard-main { padding-bottom:max(24px, env(safe-area-inset-bottom)); }
+  .application-actions button { flex:1 1 100%; }
+}
+@media (max-width:360px) {
+  .container, .nav-wrap { width:calc(100% - 24px); }
+  .brand img { max-width:42vw; }
+}
