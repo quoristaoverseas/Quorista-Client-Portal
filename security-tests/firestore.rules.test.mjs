@@ -198,6 +198,29 @@ test("registration requires phone, service choice and legal acceptance", async (
     }
   };
   await assertSucceeds(setDoc(doc(db, "users/newclient"), base));
+  await assertSucceeds(setDoc(doc(db, "applications/newclient-case"), {
+    clientUid: "newclient", applicantFullName: "New Client", applyingFor: "Myself",
+    applicationType: "study_abroad", assignedCounsellorUid: "",
+    assignedCounsellorName: "", assignedCounsellorDesignation: "",
+    status: "registered", progressStatus: "registered",
+    progressUpdate: "Your account is registered.", formVersion: 1, formData: {},
+    questionnaireStatus: "not_started", createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+  }));
   await assertFails(setDoc(doc(db, "users/no-phone"), { ...base, phone: "" }));
   await assertFails(setDoc(doc(db, "users/no-consent"), { ...base, legalAcceptance: null }));
+});
+
+test("clients can save optional questionnaire drafts without changing staff-controlled fields", async () => {
+  const db = dbFor("client1");
+  await assertSucceeds(updateDoc(doc(db, "applications/app1"), {
+    applicantFullName: "Test Applicant Updated", formData: { preferredCountry: "South Korea" },
+    questionnaireStatus: "draft", updatedAt: serverTimestamp()
+  }));
+  await assertSucceeds(updateDoc(doc(db, "applications/app1"), {
+    applicantFullName: "Test Applicant Updated", formData: { preferredCountry: "South Korea" },
+    questionnaireStatus: "completed", updatedAt: serverTimestamp()
+  }));
+  await assertFails(updateDoc(doc(db, "applications/app1"), {
+    progressStatus: "completed", updatedAt: serverTimestamp()
+  }));
 });
