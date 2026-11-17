@@ -39,6 +39,9 @@ function setMode(nextMode) {
   });
   $("service-type").value = "";
   $("phone").required = signup;
+  $("legal-acceptance").classList.toggle("hidden", !signup);
+  $("legal-acceptance-checkbox").required = signup;
+  $("legal-acceptance-checkbox").checked = false;
   $("full-name").value = "";
   $("phone").value = "";
   $("auth-submit").innerHTML = signup ? "Create account <span>→</span>" : "Sign in <span>→</span>";
@@ -456,7 +459,7 @@ function showDashboard(user, profile) {
   showPage("overview");
 }
 
-async function ensureClientProfile(user, fullName = "", phone = "", serviceType = "") {
+async function ensureClientProfile(user, fullName = "", phone = "", serviceType = "", legalAcceptance = null) {
   const userRef = doc(db, "users", user.uid);
   const existing = await getDoc(userRef);
   if (existing.exists()) {
@@ -482,7 +485,8 @@ async function ensureClientProfile(user, fullName = "", phone = "", serviceType 
     role: "client",
     accountStatus: "active",
     createdAt: serverTimestamp(),
-    authProvider: user.providerData.map((provider) => provider.providerId)
+    authProvider: user.providerData.map((provider) => provider.providerId),
+    legalAcceptance: legalAcceptance || null
   };
   await setDoc(userRef, profile);
   await ensureClientCase(user, profile);
@@ -550,9 +554,11 @@ $("auth-form").addEventListener("submit", async (event) => {
       if (!fullName) throw new Error("Please enter your full name.");
       if (!["study_abroad", "tourism"].includes(serviceType)) throw new Error("Please select Study Abroad or International Tourism.");
       if (!phone) throw new Error("Please enter your phone / WhatsApp number, including country code.");
+      if (!$("legal-acceptance-checkbox").checked) throw new Error("Please agree to the Terms & Conditions and Privacy Policy to create your account.");
+      const legalAcceptance = { termsVersion: "2026-11-17-v1", privacyVersion: "2026-11-17-v1", acceptedAt: serverTimestamp(), method: "email_password_signup" };
       const credential = await createUserWithEmailAndPassword(auth, $("email").value.trim(), $("password").value);
       await updateProfile(credential.user, { displayName: fullName });
-      const profile = await ensureClientProfile(credential.user, fullName, phone, serviceType);
+      const profile = await ensureClientProfile(credential.user, fullName, phone, serviceType, legalAcceptance);
       showDashboard(credential.user, profile);
     } else {
       const credential = await signInWithEmailAndPassword(auth, $("email").value.trim(), $("password").value);
