@@ -5,8 +5,10 @@ service cloud.firestore {
   function isSuperAdmin(){return signedIn() && request.auth.uid == "oqgmvKDsJQc7WdDcjOVi5YIohAj1";}
   function staffExists(){return signedIn() && exists(/databases/$(database)/documents/staff/$(request.auth.uid));}
   function staffData(){return get(/databases/$(database)/documents/staff/$(request.auth.uid)).data;}
-  function isActiveCounsellor(){return staffExists() && staffData().active == true && staffData().role in ["counsellor","super_admin"];}
-  function serviceAllowed(serviceName){return isSuperAdmin() || (isActiveCounsellor() && serviceName in staffData().services);}
+  function userExists(){return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));}
+  function userData(){return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;}
+  function isActiveCounsellor(){return staffExists() && userExists() && staffData().active == true && staffData().role == "counsellor" && userData().accountStatus == "active" && userData().role in ["study_counsellor","tourism_counsellor"];}
+  function serviceAllowed(serviceName){return isSuperAdmin() || (isActiveCounsellor() && serviceName in staffData().services && ((serviceName == "study_abroad" && userData().role == "study_counsellor") || (serviceName == "tourism" && userData().role == "tourism_counsellor")));}
   function assignedToMe(data){return isActiveCounsellor() && data.assignedCounsellorUid == request.auth.uid && serviceAllowed(data.applicationType);}
   match /users/{userId}{
    allow read: if isSuperAdmin() || (signedIn() && request.auth.uid==userId) || (signedIn() && resource.data.role=="client" && resource.data.accountStatus=="active" && resource.data.assignedCounsellorUid==request.auth.uid && serviceAllowed(resource.data.serviceType));
@@ -61,7 +63,7 @@ service cloud.firestore {
   match /progress_cycles/{cycleId}{
    function linkedApplication(){return get(/databases/$(database)/documents/applications/$(resource.data.applicationId)).data;}
    allow create: if isSuperAdmin() || (signedIn() && request.resource.data.createdByUid==request.auth.uid && request.resource.data.clientUid==get(/databases/$(database)/documents/applications/$(request.resource.data.applicationId)).data.clientUid && assignedToMe(get(/databases/$(database)/documents/applications/$(request.resource.data.applicationId)).data));
-   allow read: if isSuperAdmin() || (signedIn() && resource.data.clientUid==request.auth.uid) || (signedIn() && resource.data.assignedCounsellorUid==request.auth.uid && serviceAllowed(resource.data.applicationType));
+   allow read: if isSuperAdmin() || (signedIn() && resource.data.clientUid==request.auth.uid) || (signedIn() && resource.data.assignedCounsellorUid==request.auth.uid && serviceAllowed(resource.data.applicationType) && assignedToMe(linkedApplication()));
    allow update: if isSuperAdmin() || (signedIn() && assignedToMe(linkedApplication()) && request.resource.data.status=="archived" && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status","archivedAt","archivedByUid","archiveReason"]));
    allow delete: if isSuperAdmin();
   }
