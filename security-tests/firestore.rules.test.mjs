@@ -95,6 +95,11 @@ async function seed() {
       applicationType: "study_abroad", createdByUid: "study1", status: "registered",
       clientMessage: "Your case is registered.", hiddenFromClient: false, createdAt: new Date()
     });
+    await put("status_updates/hiddenUpdate", {
+      applicationId: "app1", clientUid: "client1", assignedCounsellorUid: "study1",
+      applicationType: "study_abroad", createdByUid: "study1", status: "under_review",
+      clientMessage: "Private visibility test.", hiddenFromClient: true, createdAt: new Date()
+    });
     await put("internal_notes/note1", {
       applicationId: "app1", clientUid: "client1", assignedCounsellorUid: "study1",
       applicationType: "study_abroad", createdByUid: "study1", note: "Private staff note",
@@ -174,7 +179,10 @@ test("clients can read their own case and published updates, but not private sta
   const db = dbFor("client1");
   await assertSucceeds(getDoc(doc(db, "applications/app1")));
   await assertFails(getDoc(doc(db, "applications/app2")));
-  await assertSucceeds(getDocs(query(collection(db, "status_updates"), where("clientUid", "==", "client1"))));
+  const visibleUpdates = query(collection(db, "status_updates"), where("clientUid", "==", "client1"), where("hiddenFromClient", "==", false));
+  assert.equal((await assertSucceeds(getDocs(visibleUpdates))).size, 1);
+  await assertFails(getDoc(doc(db, "status_updates/hiddenUpdate")));
+  await assertFails(getDocs(query(collection(db, "status_updates"), where("clientUid", "==", "client1"))));
   await assertFails(getDoc(doc(db, "internal_notes/note1")));
   await assertFails(getDoc(doc(db, "follow_ups/follow1")));
 });
@@ -203,7 +211,7 @@ test("counsellors can create valid updates, private notes and follow-ups for ass
   const db = dbFor("study1");
   await assertSucceeds(addDoc(collection(db, "status_updates"), {
     applicationId: "app1", clientUid: "client1", assignedCounsellorUid: "study1",
-    applicationType: "study_abroad", createdByUid: "study1", status: "under_review",
+    applicationType: "study_abroad", cycleId: "cycle1", createdByUid: "study1", status: "under_review",
     clientMessage: "Your profile is under review.", hiddenFromClient: false,
     createdAt: serverTimestamp()
   }));
@@ -217,6 +225,11 @@ test("counsellors can create valid updates, private notes and follow-ups for ass
     applicationType: "study_abroad", createdByUid: "study1", followUpDate: "2026-12-02",
     action: "Follow up with applicant", status: "pending",
     createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+  }));
+  await assertFails(addDoc(collection(db, "follow_ups"), {
+    applicationId: "app1", clientUid: "client1", assignedCounsellorUid: "study1",
+    applicationType: "study_abroad", createdByUid: "study1", followUpDate: "2026-12-03",
+    action: "Invalid legacy status", status: "open", createdAt: serverTimestamp(), updatedAt: serverTimestamp()
   }));
   await assertSucceeds(updateDoc(followUp, {
     status: "completed", completedAt: serverTimestamp(), updatedAt: serverTimestamp()

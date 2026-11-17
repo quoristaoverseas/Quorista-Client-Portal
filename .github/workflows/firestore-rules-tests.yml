@@ -6,6 +6,10 @@ on:
       - "firestore.rules"
       - "firebase.json"
       - "package.json"
+      - "index.html"
+      - "staff.html"
+      - "staff.js"
+      - "app.js"
       - "security-tests/**"
       - ".github/workflows/firestore-rules-tests.yml"
   push:

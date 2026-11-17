@@ -357,7 +357,7 @@ async function loadClientProgress() {
       root.innerHTML = '<div class="content-panel empty-panel"><div class="empty-illustration"><span>◷</span><i>✦</i></div><span class="section-kicker">YOUR JOURNEY</span><h3>Your case is being prepared</h3><p>Your registered case and all future progress updates will appear here. Your Quorista team can contact you even if you leave the optional questionnaire blank.</p></div>';
       return;
     }
-    const updateSnapshot = await getDocs(query(collection(db, "status_updates"), where("clientUid", "==", applicationUser.uid)));
+    const updateSnapshot = await getDocs(query(collection(db, "status_updates"), where("clientUid", "==", applicationUser.uid), where("hiddenFromClient", "==", false)));
     const cycleSnapshot = await getDocs(query(collection(db, "progress_cycles"), where("clientUid", "==", applicationUser.uid)));
     const cyclesByApplication = new Map();
     cycleSnapshot.docs.forEach(cycleDoc => {
