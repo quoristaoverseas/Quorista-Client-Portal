@@ -8,7 +8,9 @@ service cloud.firestore {
   function userExists(){return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));}
   function userData(){return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;}
   function isActiveCounsellor(){return staffExists() && userExists() && staffData().active == true && staffData().role == "counsellor" && userData().accountStatus == "active" && userData().role in ["study_counsellor","tourism_counsellor"];}
-  function serviceAllowed(serviceName){return isSuperAdmin() || (isActiveCounsellor() && serviceName in staffData().services && ((serviceName == "study_abroad" && userData().role == "study_counsellor") || (serviceName == "tourism" && userData().role == "tourism_counsellor")));}
+  // The staff profile's services array is the authoritative per-service permission.
+  // The users.role field identifies the staff account type, not a single-service limit.
+  function serviceAllowed(serviceName){return isSuperAdmin() || (isActiveCounsellor() && serviceName in staffData().services);}
   function assignedToMe(data){return isActiveCounsellor() && data.assignedCounsellorUid == request.auth.uid && serviceAllowed(data.applicationType);}
   match /users/{userId}{
    allow read: if isSuperAdmin() || (signedIn() && request.auth.uid==userId) || (signedIn() && resource.data.role=="client" && resource.data.accountStatus=="active" && resource.data.assignedCounsellorUid==request.auth.uid && serviceAllowed(resource.data.serviceType));
