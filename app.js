@@ -521,7 +521,21 @@ async function loadExistingClient(user) {
     throw new Error("This account is not authorized for Client Portal access. Please use the correct portal.");
   }
   const profile = profileSnap.data();
-  if (profile.serviceType) await ensureClientCase(user, profile);
+  if (profile.serviceType) {
+    await ensureClientCase(user, profile);
+    const caseSnapshot = await getDocs(query(
+      collection(db, "applications"),
+      where("clientUid", "==", user.uid)
+    ));
+    if (!caseSnapshot.empty) {
+      const existingCase = caseSnapshot.docs[0];
+      const caseData = existingCase.data();
+      applicationDraftId = existingCase.id;
+      applicationData = caseData.formData && typeof caseData.formData === "object"
+        ? { ...caseData.formData }
+        : {};
+    }
+  }
   showDashboard(user, profile);
 }
 
