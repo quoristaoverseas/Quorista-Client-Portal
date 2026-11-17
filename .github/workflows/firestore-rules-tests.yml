@@ -28,7 +28,9 @@ jobs:
         with:
           node-version: 22
       - name: Check client JavaScript syntax
-        run: node --check --input-type=module < app.js
+        run: |
+          node --check --input-type=module < app.js
+          node --check --input-type=module < staff.js
       - name: Set up Java for Firestore Emulator
         uses: actions/setup-java@v4
         with:

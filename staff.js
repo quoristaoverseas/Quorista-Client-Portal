@@ -31,6 +31,19 @@ const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 function message(id,text,ok=false){$(id).textContent=text;$(id).style.color=ok?"#23835f":"#a33228";}
 function showStaffToast(text){let node=$("staff-save-toast");if(!node){node=document.createElement("div");node.id="staff-save-toast";node.className="staff-save-toast";node.setAttribute("role","status");document.body.appendChild(node);}node.textContent=text;node.classList.add("visible");clearTimeout(node._hideTimer);node._hideTimer=setTimeout(()=>node.classList.remove("visible"),3200);}
 function servicesLabel(a=[]){return a.map(x=>x==="study_abroad"?"Study Abroad":"International Tourism").join(" · ")||"No service permission";}
+async function getAssignedServiceDocs(collectionName,serviceField,extraConstraints=[]){
+ const services=staffProfile?.services||[];
+ const results=await Promise.allSettled(services.map(service=>getDocs(query(
+  collection(db,collectionName),
+  where("assignedCounsellorUid","==",currentUser.uid),
+  where(serviceField,"==",service),
+  ...extraConstraints
+ ))));
+ const failed=results.filter(result=>result.status==="rejected");
+ if(failed.length)console.warn("Some service-scoped "+collectionName+" queries were denied or failed; continuing with available services.",failed.map(result=>result.reason));
+ if(results.length&&failed.length===results.length)throw failed[0].reason;
+ return results.flatMap(result=>result.status==="fulfilled"?result.value.docs:[]);
+}
 async function removeLegacyCounsellorEmails(){
  const [usersSnap,applicationsSnap]=await Promise.all([getDocs(collection(db,"users")),getDocs(collection(db,"applications"))]);
  const targets=[
@@ -227,10 +240,17 @@ async function loadClientDirectory(){
  if(!root)return;
  root.innerHTML='<p class="muted">Loading client accounts…</p>';
  try{
-  let snap;
-  if(isAdmin) snap=await getDocs(collection(db,"users"));
-  else snap=await getDocs(query(collection(db,"users"),where("assignedCounsellorUid","==",currentUser.uid)));
-  const clients=snap.docs.map(d=>({uid:d.id,...d.data()})).filter(c=>c.role==="client"&&c.accountStatus==="active");
+  let clientDocs=[];
+  if(isAdmin){
+   const snap=await getDocs(collection(db,"users"));
+   clientDocs=snap.docs;
+  }else{
+   clientDocs=await getAssignedServiceDocs("users","serviceType",[
+    where("role","==","client"),
+    where("accountStatus","==","active")
+   ]);
+  }
+  const clients=clientDocs.map(d=>({uid:d.id,...d.data()})).filter(c=>c.role==="client"&&c.accountStatus==="active");
   clients.sort((a,b)=>{
    const av=a.createdAt?.toMillis?a.createdAt.toMillis():new Date(a.createdAt||0).getTime();
    const bv=b.createdAt?.toMillis?b.createdAt.toMillis():new Date(b.createdAt||0).getTime();
@@ -247,7 +267,7 @@ async function loadClientDirectory(){
    return;
   }
   root.innerHTML=clients.map(c=>{
-   const assignmentOptions=activeStaff.map(s=>'<option value="'+esc(s.uid)+'" '+(c.assignedCounsellorUid===s.uid?'selected':'')+'>'+esc(s.fullName||s.email)+' · '+esc(servicesLabel(s.services||[]))+'</option>').join("");
+   const assignmentOptions=activeStaff.filter(s=>(s.services||[]).includes(c.serviceType)).map(s=>'<option value="'+esc(s.uid)+'" '+(c.assignedCounsellorUid===s.uid?'selected':'')+'>'+esc(s.fullName||s.email)+' · '+esc(servicesLabel(s.services||[]))+'</option>').join("");
    const assigned=c.assignedCounsellorName?'<span class="pill active">'+esc(c.assignedCounsellorName)+'</span>':'<span class="pill inactive">Unassigned</span>';
    const assignmentControl=isAdmin?'<div class="client-assign-control"><label>Assign counsellor<select data-client-assign="'+esc(c.uid)+'"><option value="">Leave unassigned</option>'+assignmentOptions+'</select></label><button class="primary" type="button" data-client-save="'+esc(c.uid)+'">Save assignment</button></div>':'';
    const phone=c.phone?'<a href="tel:'+esc(c.phone)+'">'+esc(c.phone)+'</a>':'<span class="muted">Not provided</span>';
@@ -316,9 +336,7 @@ async function loadCases(){
   let docs=[];
   if(isAdmin){const all=await getDocs(collection(db,"applications"));docs=all.docs;}
   else{
-   const permitted=staffProfile?.services||[];
-   const batches=await Promise.all(permitted.map(service=>getDocs(query(collection(db,"applications"),where("assignedCounsellorUid","==",currentUser.uid),where("applicationType","==",service)))));
-   docs=batches.flatMap(batch=>batch.docs);
+   docs=await getAssignedServiceDocs("applications","applicationType");
   }
   const records=docs.map(d=>({id:d.id,...d.data()})).filter(a=>["study_abroad","tourism"].includes(a.applicationType));
   const metricTotal=$("metric-total"),metricPending=$("metric-pending"),metricStudy=$("metric-study"),metricTourism=$("metric-tourism");
@@ -331,9 +349,7 @@ async function loadCases(){
   let noteDocs=[];
   if(isAdmin){const noteSnap=await getDocs(collection(db,"internal_notes"));noteDocs=noteSnap.docs;}
   else{
-   const permitted=staffProfile?.services||[];
-   const noteBatches=await Promise.all(permitted.map(service=>getDocs(query(collection(db,"internal_notes"),where("assignedCounsellorUid","==",currentUser.uid),where("applicationType","==",service)))));
-   noteDocs=noteBatches.flatMap(batch=>batch.docs);
+   noteDocs=await getAssignedServiceDocs("internal_notes","applicationType");
   }
   let progressUpdateDocs=[],progressCycleDocs=[];
   if(isAdmin){
@@ -341,8 +357,8 @@ async function loadCases(){
    progressUpdateDocs=progressSnap.docs.map(d=>({id:d.id,...d.data()}));
    progressCycleDocs=cycleSnap.docs.map(d=>({id:d.id,...d.data()}));
   }else{
-   const cycleBatches=await Promise.all((staffProfile?.services||[]).map(service=>getDocs(query(collection(db,"progress_cycles"),where("assignedCounsellorUid","==",currentUser.uid),where("applicationType","==",service)))));
-   progressCycleDocs=cycleBatches.flatMap(batch=>batch.docs.map(d=>({id:d.id,...d.data()})));
+   const cycleDocs=await getAssignedServiceDocs("progress_cycles","applicationType");
+   progressCycleDocs=cycleDocs.map(d=>({id:d.id,...d.data()}));
   }
   const notesByApplication=new Map();
   noteDocs.forEach(noteDoc=>{const note=noteDoc.data();const bucket=notesByApplication.get(note.applicationId)||[];bucket.push(note);notesByApplication.set(note.applicationId,bucket);});
@@ -522,13 +538,7 @@ async function loadFollowUps(){
    const snap=await getDocs(collection(db,"follow_ups"));
    docs=snap.docs;
   }else{
-   const services=staffProfile?.services||[];
-   const batches=await Promise.all(services.map(service=>
-    getDocs(query(collection(db,"follow_ups"),
-     where("assignedCounsellorUid","==",currentUser.uid),
-     where("applicationType","==",service)))
-   ));
-   docs=batches.flatMap(batch=>batch.docs);
+   docs=await getAssignedServiceDocs("follow_ups","applicationType");
   }
   const items=docs.map(item=>({id:item.id,...item.data()}))
    .sort((a,b)=>String(a.followUpDate||"").localeCompare(String(b.followUpDate||"")));
