@@ -226,6 +226,11 @@ test("counsellors can create valid updates, private notes and follow-ups for ass
     action: "Follow up with applicant", status: "pending",
     createdAt: serverTimestamp(), updatedAt: serverTimestamp()
   }));
+  await assertFails(addDoc(collection(db, "follow_ups"), {
+    applicationId: "app1", clientUid: "client1", assignedCounsellorUid: "study1",
+    applicationType: "study_abroad", createdByUid: "study1", followUpDate: "2026-12-03",
+    action: "Invalid legacy status", status: "open", createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+  }));
   await assertSucceeds(updateDoc(followUp, {
     status: "completed", completedAt: serverTimestamp(), updatedAt: serverTimestamp()
   }));
