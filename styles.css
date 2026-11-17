@@ -291,4 +291,4 @@ input, select, textarea { min-width:0; }
 
 
 /* Google sign-in control */
-.google-signin-button{width:100%;min-height:48px;margin-top:10px;border:1px solid #dcd8e8;border-radius:999px;background:#fff;color:#211b46;font:700 .9rem 'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:11px;cursor:pointer}.google-signin-button span{font:800 1.05rem Arial,sans-serif;color:#4285f4}.google-signin-button:disabled{opacity:.6;cursor:wait}
+.auth-card .google-signin-button{width:100%;min-height:48px;margin-top:10px;border:1px solid #dcd8e8;border-radius:999px;background:#fff;color:#211b46;font:700 .9rem 'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:11px;cursor:pointer}.auth-card .google-signin-button span{font:800 1.05rem Arial,sans-serif;color:#4285f4}.auth-card .google-signin-button:disabled{opacity:.6;cursor:wait}
