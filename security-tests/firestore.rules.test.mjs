@@ -369,7 +369,7 @@ test("registration requires phone, service choice and legal acceptance", async (
     assignedCounsellorDesignation: "", role: "client", accountStatus: "active",
     createdAt: serverTimestamp(), authProvider: ["password"],
     legalAcceptance: {
-      termsVersion: "2026-11-17-v1", privacyVersion: "2026-11-17-v1",
+      termsVersion: "2026-11-17-v1", privacyVersion: "2026-11-18-v1",
       acceptedAt: serverTimestamp(), method: "email_password_signup"
     }
   };
@@ -384,6 +384,7 @@ test("registration requires phone, service choice and legal acceptance", async (
   }));
   await assertFails(setDoc(doc(db, "users/no-phone"), { ...base, phone: "" }));
   await assertFails(setDoc(doc(db, "users/no-consent"), { ...base, legalAcceptance: null }));
+  await assertFails(setDoc(doc(db, "users/invalid-privacy-version"), { ...base, legalAcceptance: { ...base.legalAcceptance, privacyVersion: "unrecognised-version" } }));
 });
 
 test("clients can save optional questionnaire drafts without changing staff-controlled fields", async () => {
