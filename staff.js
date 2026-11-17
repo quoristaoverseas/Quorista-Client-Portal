@@ -477,7 +477,7 @@ async function loadCases(){
      const clientMessage="A new application progress cycle has been started. Reason: "+detail+". Your previous progress history has been archived and remains available separately. Your counsellor will guide you through the next steps.";
      batch.update(doc(db,"applications",id),{activeProgressCycleId:cycleRef.id,progressCycleNumber:cycleNumber,progressStatus:"registered",progressUpdate:clientMessage,universityDetails:deleteField(),lastProgressUpdatedAt:serverTimestamp(),updatedAt:serverTimestamp()});
      const updateRef=doc(collection(db,"status_updates"));
-     batch.set(updateRef,{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,cycleId:cycleRef.id,status:"registered",clientMessage,createdByUid:currentUser.uid,assignedCounsellorUid:record.assignedCounsellorUid||currentUser.uid,createdAt:serverTimestamp()});
+     batch.set(updateRef,{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,cycleId:cycleRef.id,status:"registered",clientMessage,hiddenFromClient:false,createdByUid:currentUser.uid,assignedCounsellorUid:record.assignedCounsellorUid||currentUser.uid,createdAt:serverTimestamp()});
      await batch.commit();
      await requestClientProgressEmail(id,updateRef.id);
      await loadCases();showStaffToast("New progress cycle started. Previous history has been archived.");
@@ -518,9 +518,11 @@ async function loadCases(){
      if(hasUniversityDetails)patch.universityDetails=universityDetails;
      batch.update(doc(db,"applications",id),patch);
      const updateRef=doc(collection(db,"status_updates"));
-     batch.set(updateRef,{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,cycleId,status,clientMessage,universityDetails:hasUniversityDetails?universityDetails:null,createdByUid:currentUser.uid,assignedCounsellorUid:record.assignedCounsellorUid||currentUser.uid,createdAt:serverTimestamp()});
+     const updateData={applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,cycleId,status,clientMessage,hiddenFromClient:false,createdByUid:currentUser.uid,assignedCounsellorUid:record.assignedCounsellorUid||currentUser.uid,createdAt:serverTimestamp()};
+     if(hasUniversityDetails)updateData.universityDetails=universityDetails;
+     batch.set(updateRef,updateData);
      if(internal)batch.set(doc(collection(db,"internal_notes")),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,assignedCounsellorUid:record.assignedCounsellorUid||currentUser.uid,note:internal,createdByUid:currentUser.uid,createdAt:serverTimestamp()});
-     if(followDate&&followAction)batch.set(doc(collection(db,"follow_ups")),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,assignedCounsellorUid:record.assignedCounsellorUid||currentUser.uid,followUpDate:followDate,action:followAction,status:"open",createdByUid:currentUser.uid,createdAt:serverTimestamp()});
+     if(followDate&&followAction)batch.set(doc(collection(db,"follow_ups")),{applicationId:id,clientUid:record.clientUid,applicationType:record.applicationType,assignedCounsellorUid:record.assignedCounsellorUid||currentUser.uid,followUpDate:followDate,action:followAction,status:"pending",createdByUid:currentUser.uid,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
      await batch.commit();
      await requestClientProgressEmail(id,updateRef.id);
      await loadCases();
