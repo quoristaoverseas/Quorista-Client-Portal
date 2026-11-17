@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
 import {
   getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  onAuthStateChanged, signOut, updateProfile
+  onAuthStateChanged, signOut, updateProfile, GoogleAuthProvider, signInWithPopup
 } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, serverTimestamp, collection, query, where, getDocs, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
@@ -524,7 +524,9 @@ async function loadExistingClient(user) {
       throw new Error("This is a staff account. Please use the private Counsellor Workspace.");
     }
     recoveryPending = true;
-    pendingAuthMethod = "email_password_signup";
+    pendingAuthMethod = user.providerData.some((provider) => provider.providerId === "google.com")
+      ? "google"
+      : "email_password_signup";
     setMode("signup");
     $("full-name").value = user.displayName || "";
     $("email").value = user.email || "";
@@ -557,6 +559,28 @@ async function loadExistingClient(user) {
   }
   showDashboard(user, profile);
 }
+
+$("google-signin-button").addEventListener("click", async () => {
+  if (authActionInProgress) return;
+  authActionInProgress = true;
+  const button = $("google-signin-button");
+  button.disabled = true;
+  setMessage("");
+  try {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: "select_account" });
+    const credential = await signInWithPopup(auth, provider);
+    await loadExistingClient(credential.user);
+  } catch (error) {
+    if (error.code !== "auth/popup-closed-by-user" && error.code !== "auth/cancelled-popup-request") {
+      setMessage(error.message || "Google sign-in could not be completed. Please try again.");
+      console.error(error);
+    }
+  } finally {
+    authActionInProgress = false;
+    button.disabled = false;
+  }
+});
 
 $("mode-toggle").addEventListener("click", () => setMode(mode === "login" ? "signup" : "login"));
 const requestedMode = new URLSearchParams(window.location.search).get("mode");
