@@ -595,7 +595,7 @@ $("auth-form").addEventListener("submit", async (event) => {
       if (!$("legal-acceptance-checkbox").checked) throw new Error("Please agree to the Terms & Conditions and Privacy Policy to create your account.");
       const legalAcceptance = {
         termsVersion: "2026-11-17-v1",
-        privacyVersion: "2026-11-17-v1",
+        privacyVersion: "2026-11-18-v1",
         acceptedAt: serverTimestamp(),
         method: recoveryPending ? pendingAuthMethod : "email_password_signup"
       };
