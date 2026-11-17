@@ -42,7 +42,9 @@ async function seed() {
     await put("users/inactive2", { role: "study_counsellor", accountStatus: "active" });
     await put("staff/inactive2", { role: "counsellor", active: false, services: ["study_abroad"] });
     await put("users/mismatch1", { role: "study_counsellor", accountStatus: "active" });
-    await put("staff/mismatch1", { role: "counsellor", active: true, services: ["tourism"] });
+    await put("staff/mismatch1", { role: "counsellor", active: true, services: ["study_abroad"] });
+    await put("users/multi1", { role: "study_counsellor", accountStatus: "active" });
+    await put("staff/multi1", { role: "counsellor", active: true, services: ["study_abroad", "tourism"] });
 
     await put("users/client1", {
       role: "client", accountStatus: "active", serviceType: "study_abroad",
@@ -64,6 +66,16 @@ async function seed() {
       assignedCounsellorUid: "", fullName: "Unassigned Client", email: "client4@example.com",
       phone: "+91 90000 00004"
     });
+    await put("users/client5", {
+      role: "client", accountStatus: "active", serviceType: "study_abroad",
+      assignedCounsellorUid: "multi1", fullName: "Multi-service Study Client", email: "client5@example.com",
+      phone: "+91 90000 00005"
+    });
+    await put("users/client6", {
+      role: "client", accountStatus: "active", serviceType: "tourism",
+      assignedCounsellorUid: "multi1", fullName: "Multi-service Tourism Client", email: "client6@example.com",
+      phone: "+91 90000 00006"
+    });
 
     const application = (clientUid, applicationType, assignedCounsellorUid) => ({
       clientUid, applicationType, assignedCounsellorUid,
@@ -74,6 +86,9 @@ async function seed() {
     await put("applications/app2", application("client2", "study_abroad", "study2"));
     await put("applications/app3", application("client3", "tourism", "tourism1"));
     await put("applications/app4", application("client4", "study_abroad", ""));
+    await put("applications/app5", application("client3", "tourism", "mismatch1"));
+    await put("applications/app6", application("client5", "study_abroad", "multi1"));
+    await put("applications/app7", application("client6", "tourism", "multi1"));
 
     await put("status_updates/update1", {
       applicationId: "app1", clientUid: "client1", assignedCounsellorUid: "study1",
@@ -127,6 +142,32 @@ test("inactive or role/service-mismatched counsellors are denied", async () => {
   await assertFails(getDoc(doc(dbFor("inactive2"), "applications/app1")));
   await assertFails(getDoc(doc(dbFor("mismatch1"), "applications/app3")));
   await assertFails(getDoc(doc(dbFor("mismatch1"), "applications/app1")));
+  await assertFails(getDoc(doc(dbFor("mismatch1"), "applications/app5")));
+});
+
+test("a multi-service counsellor can query assigned cases and clients for each permitted service", async () => {
+  const db = dbFor("multi1");
+  const studyCases = query(collection(db, "applications"),
+    where("assignedCounsellorUid", "==", "multi1"),
+    where("applicationType", "==", "study_abroad"));
+  const tourismCases = query(collection(db, "applications"),
+    where("assignedCounsellorUid", "==", "multi1"),
+    where("applicationType", "==", "tourism"));
+  assert.equal((await assertSucceeds(getDocs(studyCases))).size, 1);
+  assert.equal((await assertSucceeds(getDocs(tourismCases))).size, 1);
+
+  const studyClients = query(collection(db, "users"),
+    where("assignedCounsellorUid", "==", "multi1"),
+    where("serviceType", "==", "study_abroad"),
+    where("role", "==", "client"),
+    where("accountStatus", "==", "active"));
+  const tourismClients = query(collection(db, "users"),
+    where("assignedCounsellorUid", "==", "multi1"),
+    where("serviceType", "==", "tourism"),
+    where("role", "==", "client"),
+    where("accountStatus", "==", "active"));
+  assert.equal((await assertSucceeds(getDocs(studyClients))).size, 1);
+  assert.equal((await assertSucceeds(getDocs(tourismClients))).size, 1);
 });
 
 test("clients can read their own case and published updates, but not private staff records", async () => {
