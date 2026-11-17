@@ -280,3 +280,11 @@ input, select, textarea { min-width:0; }
   .container, .nav-wrap { width:calc(100% - 24px); }
   .brand img { max-width:42vw; }
 }
+
+/* Legal acceptance at client registration */
+.auth-card .legal-acceptance{margin-top:8px;padding:13px 14px;border:1px solid #e6e1f1;border-radius:12px;background:#faf9fe}
+.auth-card .legal-acceptance-label{display:flex;align-items:flex-start;gap:10px;margin:0;color:#5d5a7e;font-size:.75rem;font-weight:500;line-height:1.55}
+.auth-card .legal-acceptance-label input[type=checkbox]{flex:0 0 17px;width:17px;height:17px;margin:2px 0 0;accent-color:#5b3df5}
+.auth-card .legal-acceptance-label a{color:#4b35c7;text-decoration:underline;text-underline-offset:2px;font-weight:700}
+.portal-legal-links{display:block;margin-top:7px}
+.portal-legal-links a{color:#c9bfff;text-decoration:underline;text-underline-offset:2px;margin:0 3px}
