@@ -12,6 +12,8 @@ const db = getFirestore(app);
 const $ = (id) => document.getElementById(id);
 let mode = "login";
 let authActionInProgress = false;
+let recoveryPending = false;
+let pendingAuthMethod = "email_password_signup";
 
 $("year").textContent = new Date().getFullYear();
 $("year-auth").textContent = new Date().getFullYear();
@@ -84,7 +86,6 @@ function formatDate(value) {
 
 function providerLabel(providers = []) {
   const labels = providers.map((provider) => {
-    if (provider === "google.com") return "Google";
     if (provider === "password") return "Email and password";
     return provider;
   });
@@ -324,12 +325,17 @@ async function saveApplication(submit) {
       applicantFullName: applicationData.applicantFullName || applicationProfile?.fullName || "",
       applyingFor: applicationData.applyingFor || "Myself",
       formData: applicationData,
-      questionnaireStatus: "completed",
+      questionnaireStatus: submit ? "completed" : "draft",
       questionnaireUpdatedAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
     applicationDraftId = existingCase.id;
-    showApplicationMessage("Your optional requirements questionnaire has been saved to your existing case. No new application was created.", false);
+    showApplicationMessage(
+      submit
+        ? "Your optional requirements have been completed and saved to your existing case. No new application was created."
+        : "Your optional requirements draft has been saved. You can return and complete it later.",
+      false
+    );
     // Case progress is displayed separately from the optional questionnaire.
   } catch (error) {
     console.error("Requirements questionnaire save failed:", error);
@@ -511,12 +517,44 @@ async function ensureClientCase(user, profile) {
 
 async function loadExistingClient(user) {
   const profileSnap = await getDoc(doc(db, "users", user.uid));
-  if (!profileSnap.exists() || profileSnap.data().role !== "client" || profileSnap.data().accountStatus !== "active") {
+  if (!profileSnap.exists()) {
+    const staffSnap = await getDoc(doc(db, "staff", user.uid));
+    if (staffSnap.exists()) {
+      await signOut(auth);
+      throw new Error("This is a staff account. Please use the private Counsellor Workspace.");
+    }
+    recoveryPending = true;
+    pendingAuthMethod = "email_password_signup";
+    setMode("signup");
+    $("full-name").value = user.displayName || "";
+    $("email").value = user.email || "";
+    $("email").readOnly = Boolean(user.email);
+    $("password").required = false;
+    setMessage("Your sign-in account exists, but your Quorista profile was not completed. Add your phone number, choose your service and accept the legal terms to finish registration.");
+    $("auth-view").classList.remove("hidden");
+    $("dashboard-view").classList.add("hidden");
+    return;
+  }
+  if (profileSnap.data().role !== "client" || profileSnap.data().accountStatus !== "active") {
     await signOut(auth);
     throw new Error("This account is not authorized for Client Portal access. Please use the correct portal.");
   }
   const profile = profileSnap.data();
-  if (profile.serviceType) await ensureClientCase(user, profile);
+  if (profile.serviceType) {
+    await ensureClientCase(user, profile);
+    const caseSnapshot = await getDocs(query(
+      collection(db, "applications"),
+      where("clientUid", "==", user.uid)
+    ));
+    if (!caseSnapshot.empty) {
+      const existingCase = caseSnapshot.docs[0];
+      const caseData = existingCase.data();
+      applicationDraftId = existingCase.id;
+      applicationData = caseData.formData && typeof caseData.formData === "object"
+        ? { ...caseData.formData }
+        : {};
+    }
+  }
   showDashboard(user, profile);
 }
 
@@ -555,11 +593,25 @@ $("auth-form").addEventListener("submit", async (event) => {
       if (!["study_abroad", "tourism"].includes(serviceType)) throw new Error("Please select Study Abroad or International Tourism.");
       if (!phone) throw new Error("Please enter your phone / WhatsApp number, including country code.");
       if (!$("legal-acceptance-checkbox").checked) throw new Error("Please agree to the Terms & Conditions and Privacy Policy to create your account.");
-      const legalAcceptance = { termsVersion: "2026-11-17-v1", privacyVersion: "2026-11-17-v1", acceptedAt: serverTimestamp(), method: "email_password_signup" };
-      const credential = await createUserWithEmailAndPassword(auth, $("email").value.trim(), $("password").value);
-      await updateProfile(credential.user, { displayName: fullName });
-      const profile = await ensureClientProfile(credential.user, fullName, phone, serviceType, legalAcceptance);
-      showDashboard(credential.user, profile);
+      const legalAcceptance = {
+        termsVersion: "2026-11-17-v1",
+        privacyVersion: "2026-11-17-v1",
+        acceptedAt: serverTimestamp(),
+        method: recoveryPending ? pendingAuthMethod : "email_password_signup"
+      };
+      let signupUser;
+      if (recoveryPending && auth.currentUser) {
+        signupUser = auth.currentUser;
+      } else {
+        const credential = await createUserWithEmailAndPassword(auth, $("email").value.trim(), $("password").value);
+        signupUser = credential.user;
+      }
+      await updateProfile(signupUser, { displayName: fullName });
+      const profile = await ensureClientProfile(signupUser, fullName, phone, serviceType, legalAcceptance);
+      recoveryPending = false;
+      $("email").readOnly = false;
+      $("password").required = true;
+      showDashboard(signupUser, profile);
     } else {
       const credential = await signInWithEmailAndPassword(auth, $("email").value.trim(), $("password").value);
       await loadExistingClient(credential.user);
@@ -588,6 +640,10 @@ onAuthStateChanged(auth, async (user) => {
     applicationProfile = null;
     applicationDraftId = null;
     applicationData = {};
+    recoveryPending = false;
+    pendingAuthMethod = "email_password_signup";
+    $("email").readOnly = false;
+    $("password").required = true;
     document.body.classList.remove("dashboard-active");
     $("auth-view").classList.remove("hidden");
     $("dashboard-view").classList.add("hidden");

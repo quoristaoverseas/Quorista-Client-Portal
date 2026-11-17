@@ -1,0 +1,235 @@
+import fs from "node:fs";
+import { before, after, beforeEach, test } from "node:test";
+import assert from "node:assert/strict";
+import {
+  initializeTestEnvironment,
+  assertSucceeds,
+  assertFails
+} from "@firebase/rules-unit-testing";
+import {
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  setDoc,
+  updateDoc,
+  where,
+  serverTimestamp
+} from "firebase/firestore";
+
+const projectId = "demo-quorista-client-platform";
+const superAdminUid = "oqgmvKDsJQc7WdDcjOVi5YIohAj1";
+let testEnv;
+
+const dbFor = (uid, email = `${uid}@example.com`) =>
+  testEnv.authenticatedContext(uid, { email }).firestore();
+
+async function seed() {
+  await testEnv.clearFirestore();
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    const put = (path, data) => setDoc(doc(db, path), data);
+    await put("users/study1", { role: "study_counsellor", accountStatus: "active" });
+    await put("staff/study1", { role: "counsellor", active: true, services: ["study_abroad"] });
+    await put("users/tourism1", { role: "tourism_counsellor", accountStatus: "active" });
+    await put("staff/tourism1", { role: "counsellor", active: true, services: ["tourism"] });
+    await put("users/study2", { role: "study_counsellor", accountStatus: "active" });
+    await put("staff/study2", { role: "counsellor", active: true, services: ["study_abroad"] });
+    await put("users/inactive1", { role: "study_counsellor", accountStatus: "inactive" });
+    await put("staff/inactive1", { role: "counsellor", active: true, services: ["study_abroad"] });
+    await put("users/inactive2", { role: "study_counsellor", accountStatus: "active" });
+    await put("staff/inactive2", { role: "counsellor", active: false, services: ["study_abroad"] });
+    await put("users/mismatch1", { role: "study_counsellor", accountStatus: "active" });
+    await put("staff/mismatch1", { role: "counsellor", active: true, services: ["tourism"] });
+
+    await put("users/client1", {
+      role: "client", accountStatus: "active", serviceType: "study_abroad",
+      assignedCounsellorUid: "study1", fullName: "Test Client", email: "client1@example.com",
+      phone: "+91 90000 00001"
+    });
+    await put("users/client2", {
+      role: "client", accountStatus: "active", serviceType: "study_abroad",
+      assignedCounsellorUid: "study2", fullName: "Other Client", email: "client2@example.com",
+      phone: "+91 90000 00002"
+    });
+    await put("users/client3", {
+      role: "client", accountStatus: "active", serviceType: "tourism",
+      assignedCounsellorUid: "tourism1", fullName: "Tourism Client", email: "client3@example.com",
+      phone: "+91 90000 00003"
+    });
+    await put("users/client4", {
+      role: "client", accountStatus: "active", serviceType: "study_abroad",
+      assignedCounsellorUid: "", fullName: "Unassigned Client", email: "client4@example.com",
+      phone: "+91 90000 00004"
+    });
+
+    const application = (clientUid, applicationType, assignedCounsellorUid) => ({
+      clientUid, applicationType, assignedCounsellorUid,
+      applicantFullName: "Test Applicant", status: "registered", progressStatus: "registered",
+      formData: {}, formVersion: 1, questionnaireStatus: "not_started"
+    });
+    await put("applications/app1", application("client1", "study_abroad", "study1"));
+    await put("applications/app2", application("client2", "study_abroad", "study2"));
+    await put("applications/app3", application("client3", "tourism", "tourism1"));
+    await put("applications/app4", application("client4", "study_abroad", ""));
+
+    await put("status_updates/update1", {
+      applicationId: "app1", clientUid: "client1", assignedCounsellorUid: "study1",
+      applicationType: "study_abroad", createdByUid: "study1", status: "registered",
+      clientMessage: "Your case is registered.", hiddenFromClient: false, createdAt: new Date()
+    });
+    await put("internal_notes/note1", {
+      applicationId: "app1", clientUid: "client1", assignedCounsellorUid: "study1",
+      applicationType: "study_abroad", createdByUid: "study1", note: "Private staff note",
+      createdAt: new Date()
+    });
+    await put("follow_ups/follow1", {
+      applicationId: "app1", clientUid: "client1", assignedCounsellorUid: "study1",
+      applicationType: "study_abroad", createdByUid: "study1", followUpDate: "2026-12-01",
+      action: "Call applicant", status: "pending", createdAt: new Date(), updatedAt: new Date()
+    });
+    await put("progress_cycles/cycle1", {
+      applicationId: "app1", clientUid: "client1", assignedCounsellorUid: "study1",
+      applicationType: "study_abroad", createdByUid: "study1", status: "active"
+    });
+  });
+}
+
+before(async () => {
+  testEnv = await initializeTestEnvironment({
+    projectId,
+    firestore: { rules: fs.readFileSync(new URL("../firestore.rules", import.meta.url), "utf8") }
+  });
+});
+after(async () => {
+  if (testEnv) await testEnv.cleanup();
+});
+beforeEach(seed);
+
+test("counsellors can read only assigned cases in their mapped service", async () => {
+  const studyDb = dbFor("study1");
+  await assertSucceeds(getDoc(doc(studyDb, "applications/app1")));
+  await assertFails(getDoc(doc(studyDb, "applications/app2")));
+  await assertFails(getDoc(doc(studyDb, "applications/app3")));
+  await assertFails(getDoc(doc(studyDb, "applications/app4")));
+
+  const tourismDb = dbFor("tourism1");
+  await assertSucceeds(getDoc(doc(tourismDb, "applications/app3")));
+  await assertFails(getDoc(doc(tourismDb, "applications/app1")));
+  await assertFails(getDoc(doc(tourismDb, "applications/app2")));
+  await assertFails(getDoc(doc(tourismDb, "applications/app4")));
+});
+
+test("inactive or role/service-mismatched counsellors are denied", async () => {
+  await assertFails(getDoc(doc(dbFor("inactive1"), "applications/app1")));
+  await assertFails(getDoc(doc(dbFor("inactive2"), "applications/app1")));
+  await assertFails(getDoc(doc(dbFor("mismatch1"), "applications/app3")));
+  await assertFails(getDoc(doc(dbFor("mismatch1"), "applications/app1")));
+});
+
+test("clients can read their own case and published updates, but not private staff records", async () => {
+  const db = dbFor("client1");
+  await assertSucceeds(getDoc(doc(db, "applications/app1")));
+  await assertFails(getDoc(doc(db, "applications/app2")));
+  await assertSucceeds(getDocs(query(collection(db, "status_updates"), where("clientUid", "==", "client1"))));
+  await assertFails(getDoc(doc(db, "internal_notes/note1")));
+  await assertFails(getDoc(doc(db, "follow_ups/follow1")));
+});
+
+test("clients cannot change their role or counsellor assignment", async () => {
+  const db = dbFor("client1");
+  await assertFails(updateDoc(doc(db, "users/client1"), { role: "super_admin" }));
+  await assertFails(updateDoc(doc(db, "applications/app1"), { assignedCounsellorUid: "client1" }));
+});
+
+test("counsellor queries must include the assignment and service constraints", async () => {
+  const db = dbFor("study1");
+  const safeQuery = query(
+    collection(db, "status_updates"),
+    where("applicationId", "==", "app1"),
+    where("assignedCounsellorUid", "==", "study1"),
+    where("applicationType", "==", "study_abroad")
+  );
+  const unsafeQuery = query(collection(db, "status_updates"), where("applicationId", "==", "app1"));
+  await assertSucceeds(getDocs(safeQuery));
+  await assertFails(getDocs(unsafeQuery));
+  await assertSucceeds(getDoc(doc(db, "progress_cycles/cycle1")));
+});
+
+test("counsellors can create valid updates, private notes and follow-ups for assigned cases", async () => {
+  const db = dbFor("study1");
+  await assertSucceeds(addDoc(collection(db, "status_updates"), {
+    applicationId: "app1", clientUid: "client1", assignedCounsellorUid: "study1",
+    applicationType: "study_abroad", createdByUid: "study1", status: "under_review",
+    clientMessage: "Your profile is under review.", hiddenFromClient: false,
+    createdAt: serverTimestamp()
+  }));
+  await assertSucceeds(addDoc(collection(db, "internal_notes"), {
+    applicationId: "app1", clientUid: "client1", assignedCounsellorUid: "study1",
+    applicationType: "study_abroad", createdByUid: "study1",
+    note: "Internal review completed.", createdAt: serverTimestamp()
+  }));
+  const followUp = await assertSucceeds(addDoc(collection(db, "follow_ups"), {
+    applicationId: "app1", clientUid: "client1", assignedCounsellorUid: "study1",
+    applicationType: "study_abroad", createdByUid: "study1", followUpDate: "2026-12-02",
+    action: "Follow up with applicant", status: "pending",
+    createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+  }));
+  await assertSucceeds(updateDoc(followUp, {
+    status: "completed", completedAt: serverTimestamp(), updatedAt: serverTimestamp()
+  }));
+  await assertFails(addDoc(collection(db, "internal_notes"), {
+    applicationId: "app2", clientUid: "client2", assignedCounsellorUid: "study1",
+    applicationType: "study_abroad", createdByUid: "study1",
+    note: "Attempt to access another counsellor's case", createdAt: serverTimestamp()
+  }));
+});
+
+test("Super Admin retains access across service types", async () => {
+  const db = dbFor(superAdminUid);
+  await assertSucceeds(getDoc(doc(db, "applications/app1")));
+  await assertSucceeds(getDoc(doc(db, "applications/app3")));
+  await assertSucceeds(getDoc(doc(db, "internal_notes/note1")));
+});
+
+test("registration requires phone, service choice and legal acceptance", async () => {
+  const db = dbFor("newclient", "newclient@example.com");
+  const base = {
+    fullName: "New Client", email: "newclient@example.com", phone: "+91 90000 00005",
+    serviceType: "study_abroad", assignedCounsellorUid: "", assignedCounsellorName: "",
+    assignedCounsellorDesignation: "", role: "client", accountStatus: "active",
+    createdAt: serverTimestamp(), authProvider: ["password"],
+    legalAcceptance: {
+      termsVersion: "2026-11-17-v1", privacyVersion: "2026-11-17-v1",
+      acceptedAt: serverTimestamp(), method: "email_password_signup"
+    }
+  };
+  await assertSucceeds(setDoc(doc(db, "users/newclient"), base));
+  await assertSucceeds(setDoc(doc(db, "applications/newclient-case"), {
+    clientUid: "newclient", applicantFullName: "New Client", applyingFor: "Myself",
+    applicationType: "study_abroad", assignedCounsellorUid: "",
+    assignedCounsellorName: "", assignedCounsellorDesignation: "",
+    status: "registered", progressStatus: "registered",
+    progressUpdate: "Your account is registered.", formVersion: 1, formData: {},
+    questionnaireStatus: "not_started", createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+  }));
+  await assertFails(setDoc(doc(db, "users/no-phone"), { ...base, phone: "" }));
+  await assertFails(setDoc(doc(db, "users/no-consent"), { ...base, legalAcceptance: null }));
+});
+
+test("clients can save optional questionnaire drafts without changing staff-controlled fields", async () => {
+  const db = dbFor("client1");
+  await assertSucceeds(updateDoc(doc(db, "applications/app1"), {
+    applicantFullName: "Test Applicant Updated", formData: { preferredCountry: "South Korea" },
+    questionnaireStatus: "draft", updatedAt: serverTimestamp()
+  }));
+  await assertSucceeds(updateDoc(doc(db, "applications/app1"), {
+    applicantFullName: "Test Applicant Updated", formData: { preferredCountry: "South Korea" },
+    questionnaireStatus: "completed", updatedAt: serverTimestamp()
+  }));
+  await assertFails(updateDoc(doc(db, "applications/app1"), {
+    progressStatus: "completed", updatedAt: serverTimestamp()
+  }));
+});
