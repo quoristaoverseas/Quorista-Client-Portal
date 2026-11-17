@@ -114,6 +114,28 @@ async function seed() {
       applicationId: "app1", clientUid: "client1", assignedCounsellorUid: "study1",
       applicationType: "study_abroad", createdByUid: "study1", status: "active"
     });
+    await put("status_updates/tourismUpdate", {
+      applicationId: "app3", clientUid: "client3", assignedCounsellorUid: "tourism1",
+      applicationType: "tourism", cycleId: "tourism-cycle", createdByUid: "tourism1",
+      status: "requirements_review", clientMessage: "Travel requirements are being reviewed.",
+      hiddenFromClient: false, createdAt: new Date()
+    });
+    await put("internal_notes/tourismNote", {
+      applicationId: "app3", clientUid: "client3", assignedCounsellorUid: "tourism1",
+      applicationType: "tourism", createdByUid: "tourism1", note: "Tourism internal note",
+      createdAt: new Date()
+    });
+    await put("follow_ups/tourismFollowUp", {
+      applicationId: "app3", clientUid: "client3", assignedCounsellorUid: "tourism1",
+      applicationType: "tourism", createdByUid: "tourism1", followUpDate: "2026-12-05",
+      action: "Confirm traveller details", status: "pending", createdAt: new Date(), updatedAt: new Date()
+    });
+    await put("progress_cycles/tourismCycle", {
+      applicationId: "app3", clientUid: "client3", assignedCounsellorUid: "tourism1",
+      applicationType: "tourism", createdByUid: "tourism1", cycleNumber: 1,
+      label: "Initial tourism cycle", reason: "Initial travel planning", status: "active",
+      createdAt: new Date()
+    });
   });
 }
 
@@ -238,6 +260,97 @@ test("counsellors can create valid updates, private notes and follow-ups for ass
     applicationId: "app2", clientUid: "client2", assignedCounsellorUid: "study1",
     applicationType: "study_abroad", createdByUid: "study1",
     note: "Attempt to access another counsellor's case", createdAt: serverTimestamp()
+  }));
+});
+
+test("Tourism-only counsellors can read and write Tourism records but never Study Abroad records", async () => {
+  const db = dbFor("tourism1");
+  await assertSucceeds(getDoc(doc(db, "users/client3")));
+  await assertFails(getDoc(doc(db, "users/client1")));
+  await assertSucceeds(getDoc(doc(db, "status_updates/tourismUpdate")));
+  await assertSucceeds(getDoc(doc(db, "internal_notes/tourismNote")));
+  await assertSucceeds(getDoc(doc(db, "follow_ups/tourismFollowUp")));
+  await assertSucceeds(getDoc(doc(db, "progress_cycles/tourismCycle")));
+  await assertFails(getDoc(doc(db, "status_updates/update1")));
+  await assertFails(getDoc(doc(db, "internal_notes/note1")));
+  await assertFails(getDoc(doc(db, "follow_ups/follow1")));
+  await assertFails(getDoc(doc(db, "progress_cycles/cycle1")));
+
+  await assertSucceeds(addDoc(collection(db, "status_updates"), {
+    applicationId: "app3", clientUid: "client3", assignedCounsellorUid: "tourism1",
+    applicationType: "tourism", cycleId: "tourism-cycle", createdByUid: "tourism1",
+    status: "requirements_review", clientMessage: "Your travel requirements are under review.",
+    hiddenFromClient: false, createdAt: serverTimestamp()
+  }));
+  await assertSucceeds(addDoc(collection(db, "internal_notes"), {
+    applicationId: "app3", clientUid: "client3", assignedCounsellorUid: "tourism1",
+    applicationType: "tourism", createdByUid: "tourism1",
+    note: "Reviewed traveller preferences.", createdAt: serverTimestamp()
+  }));
+  await assertSucceeds(addDoc(collection(db, "follow_ups"), {
+    applicationId: "app3", clientUid: "client3", assignedCounsellorUid: "tourism1",
+    applicationType: "tourism", createdByUid: "tourism1", followUpDate: "2026-12-06",
+    action: "Confirm itinerary", status: "pending",
+    createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+  }));
+  await assertSucceeds(addDoc(collection(db, "progress_cycles"), {
+    applicationId: "app3", clientUid: "client3", applicationType: "tourism",
+    cycleNumber: 2, label: "Second tourism cycle", reason: "Revised itinerary",
+    status: "active", createdByUid: "tourism1", assignedCounsellorUid: "tourism1",
+    createdAt: serverTimestamp()
+  }));
+
+  await assertFails(addDoc(collection(db, "status_updates"), {
+    applicationId: "app1", clientUid: "client1", assignedCounsellorUid: "tourism1",
+    applicationType: "study_abroad", cycleId: "study-cycle", createdByUid: "tourism1",
+    status: "under_review", clientMessage: "Cross-service attempt.",
+    hiddenFromClient: false, createdAt: serverTimestamp()
+  }));
+  await assertFails(addDoc(collection(db, "internal_notes"), {
+    applicationId: "app1", clientUid: "client1", assignedCounsellorUid: "tourism1",
+    applicationType: "study_abroad", createdByUid: "tourism1",
+    note: "Cross-service attempt.", createdAt: serverTimestamp()
+  }));
+  await assertFails(addDoc(collection(db, "follow_ups"), {
+    applicationId: "app1", clientUid: "client1", assignedCounsellorUid: "tourism1",
+    applicationType: "study_abroad", createdByUid: "tourism1", followUpDate: "2026-12-07",
+    action: "Cross-service attempt", status: "pending",
+    createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+  }));
+  await assertFails(addDoc(collection(db, "progress_cycles"), {
+    applicationId: "app1", clientUid: "client1", applicationType: "study_abroad",
+    cycleNumber: 2, label: "Invalid cycle", reason: "Cross-service attempt",
+    status: "active", createdByUid: "tourism1", assignedCounsellorUid: "tourism1",
+    createdAt: serverTimestamp()
+  }));
+});
+
+test("a Study Abroad-only counsellor cannot read Tourism client records", async () => {
+  const db = dbFor("study1");
+  await assertSucceeds(getDoc(doc(db, "users/client1")));
+  await assertFails(getDoc(doc(db, "users/client3")));
+  await assertFails(getDoc(doc(db, "applications/app3")));
+  await assertFails(getDoc(doc(db, "status_updates/tourismUpdate")));
+  await assertFails(getDoc(doc(db, "internal_notes/tourismNote")));
+  await assertFails(getDoc(doc(db, "follow_ups/tourismFollowUp")));
+  await assertFails(getDoc(doc(db, "progress_cycles/tourismCycle")));
+});
+
+test("progress cycles reject untrusted fields and non-owner archive writes", async () => {
+  const db = dbFor("tourism1");
+  await assertFails(addDoc(collection(db, "progress_cycles"), {
+    applicationId: "app3", clientUid: "client3", applicationType: "tourism",
+    cycleNumber: 2, label: "Invalid cycle", reason: "Unexpected field",
+    status: "active", createdByUid: "tourism1", assignedCounsellorUid: "tourism1",
+    createdAt: serverTimestamp(), privileged: true
+  }));
+  await assertFails(updateDoc(doc(db, "progress_cycles/tourismCycle"), {
+    status: "archived", archivedAt: serverTimestamp(), archivedByUid: "someone-else",
+    archiveReason: "Attempted spoof"
+  }));
+  await assertSucceeds(updateDoc(doc(db, "progress_cycles/tourismCycle"), {
+    status: "archived", archivedAt: serverTimestamp(), archivedByUid: "tourism1",
+    archiveReason: "Planning cycle completed"
   }));
 });
 
