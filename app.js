@@ -324,12 +324,17 @@ async function saveApplication(submit) {
       applicantFullName: applicationData.applicantFullName || applicationProfile?.fullName || "",
       applyingFor: applicationData.applyingFor || "Myself",
       formData: applicationData,
-      questionnaireStatus: "completed",
+      questionnaireStatus: submit ? "completed" : "draft",
       questionnaireUpdatedAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
     applicationDraftId = existingCase.id;
-    showApplicationMessage("Your optional requirements questionnaire has been saved to your existing case. No new application was created.", false);
+    showApplicationMessage(
+      submit
+        ? "Your optional requirements have been completed and saved to your existing case. No new application was created."
+        : "Your optional requirements draft has been saved. You can return and complete it later.",
+      false
+    );
     // Case progress is displayed separately from the optional questionnaire.
   } catch (error) {
     console.error("Requirements questionnaire save failed:", error);
