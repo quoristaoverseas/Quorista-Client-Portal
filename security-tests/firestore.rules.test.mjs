@@ -39,6 +39,8 @@ async function seed() {
     await put("staff/study2", { role: "counsellor", active: true, services: ["study_abroad"] });
     await put("users/inactive1", { role: "study_counsellor", accountStatus: "inactive" });
     await put("staff/inactive1", { role: "counsellor", active: true, services: ["study_abroad"] });
+    await put("users/inactive2", { role: "study_counsellor", accountStatus: "active" });
+    await put("staff/inactive2", { role: "counsellor", active: false, services: ["study_abroad"] });
     await put("users/mismatch1", { role: "study_counsellor", accountStatus: "active" });
     await put("staff/mismatch1", { role: "counsellor", active: true, services: ["tourism"] });
 
@@ -107,15 +109,22 @@ after(async () => {
 beforeEach(seed);
 
 test("counsellors can read only assigned cases in their mapped service", async () => {
-  const db = dbFor("study1");
-  await assertSucceeds(getDoc(doc(db, "applications/app1")));
-  await assertFails(getDoc(doc(db, "applications/app2")));
-  await assertFails(getDoc(doc(db, "applications/app3")));
-  await assertFails(getDoc(doc(db, "applications/app4")));
+  const studyDb = dbFor("study1");
+  await assertSucceeds(getDoc(doc(studyDb, "applications/app1")));
+  await assertFails(getDoc(doc(studyDb, "applications/app2")));
+  await assertFails(getDoc(doc(studyDb, "applications/app3")));
+  await assertFails(getDoc(doc(studyDb, "applications/app4")));
+
+  const tourismDb = dbFor("tourism1");
+  await assertSucceeds(getDoc(doc(tourismDb, "applications/app3")));
+  await assertFails(getDoc(doc(tourismDb, "applications/app1")));
+  await assertFails(getDoc(doc(tourismDb, "applications/app2")));
+  await assertFails(getDoc(doc(tourismDb, "applications/app4")));
 });
 
 test("inactive or role/service-mismatched counsellors are denied", async () => {
   await assertFails(getDoc(doc(dbFor("inactive1"), "applications/app1")));
+  await assertFails(getDoc(doc(dbFor("inactive2"), "applications/app1")));
   await assertFails(getDoc(doc(dbFor("mismatch1"), "applications/app3")));
   await assertFails(getDoc(doc(dbFor("mismatch1"), "applications/app1")));
 });
