@@ -384,7 +384,8 @@ test("registration requires phone, service choice and legal acceptance", async (
   }));
   await assertFails(setDoc(doc(db, "users/no-phone"), { ...base, phone: "" }));
   await assertFails(setDoc(doc(db, "users/no-consent"), { ...base, legalAcceptance: null }));
-  await assertSucceeds(setDoc(doc(db, "users/google-client"), {
+  const googleDb = dbFor("google-client", "google-client@example.com");
+  await assertSucceeds(setDoc(doc(googleDb, "users/google-client"), {
     ...base, email: "google-client@example.com", legalAcceptance: {
       termsVersion: "2026-11-17-v1", privacyVersion: "2026-11-17-v1",
       acceptedAt: serverTimestamp(), method: "google"
