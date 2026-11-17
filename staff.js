@@ -349,7 +349,10 @@ async function loadCases(){
   let noteDocs=[];
   if(isAdmin){const noteSnap=await getDocs(collection(db,"internal_notes"));noteDocs=noteSnap.docs;}
   else{
-   noteDocs=await getAssignedServiceDocs("internal_notes","applicationType");
+   // Auxiliary history must never prevent the assigned applications themselves from appearing.
+   const notesResult=await Promise.allSettled([getAssignedServiceDocs("internal_notes","applicationType")]);
+   if(notesResult[0].status==="fulfilled")noteDocs=notesResult[0].value;
+   else console.warn("Internal notes are temporarily unavailable under the published Firestore rules.",notesResult[0].reason);
   }
   let progressUpdateDocs=[],progressCycleDocs=[];
   if(isAdmin){
@@ -357,8 +360,10 @@ async function loadCases(){
    progressUpdateDocs=progressSnap.docs.map(d=>({id:d.id,...d.data()}));
    progressCycleDocs=cycleSnap.docs.map(d=>({id:d.id,...d.data()}));
   }else{
-   const cycleDocs=await getAssignedServiceDocs("progress_cycles","applicationType");
-   progressCycleDocs=cycleDocs.map(d=>({id:d.id,...d.data()}));
+   // Cycle history is optional; a denied auxiliary query must not hide the case list.
+   const cyclesResult=await Promise.allSettled([getAssignedServiceDocs("progress_cycles","applicationType")]);
+   if(cyclesResult[0].status==="fulfilled")progressCycleDocs=cyclesResult[0].value.map(d=>({id:d.id,...d.data()}));
+   else console.warn("Progress-cycle history is temporarily unavailable under the published Firestore rules.",cyclesResult[0].reason);
   }
   const notesByApplication=new Map();
   noteDocs.forEach(noteDoc=>{const note=noteDoc.data();const bucket=notesByApplication.get(note.applicationId)||[];bucket.push(note);notesByApplication.set(note.applicationId,bucket);});
