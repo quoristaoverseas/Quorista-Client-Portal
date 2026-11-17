@@ -227,10 +227,22 @@ async function loadClientDirectory(){
  if(!root)return;
  root.innerHTML='<p class="muted">Loading client accounts…</p>';
  try{
-  let snap;
-  if(isAdmin) snap=await getDocs(collection(db,"users"));
-  else snap=await getDocs(query(collection(db,"users"),where("assignedCounsellorUid","==",currentUser.uid)));
-  const clients=snap.docs.map(d=>({uid:d.id,...d.data()})).filter(c=>c.role==="client"&&c.accountStatus==="active");
+  let clientDocs=[];
+  if(isAdmin){
+   const snap=await getDocs(collection(db,"users"));
+   clientDocs=snap.docs;
+  }else{
+   const permitted=staffProfile?.services||[];
+   const batches=await Promise.all(permitted.map(service=>getDocs(query(
+    collection(db,"users"),
+    where("assignedCounsellorUid","==",currentUser.uid),
+    where("serviceType","==",service),
+    where("role","==","client"),
+    where("accountStatus","==","active")
+   ))));
+   clientDocs=batches.flatMap(batch=>batch.docs);
+  }
+  const clients=clientDocs.map(d=>({uid:d.id,...d.data()})).filter(c=>c.role==="client"&&c.accountStatus==="active");
   clients.sort((a,b)=>{
    const av=a.createdAt?.toMillis?a.createdAt.toMillis():new Date(a.createdAt||0).getTime();
    const bv=b.createdAt?.toMillis?b.createdAt.toMillis():new Date(b.createdAt||0).getTime();
@@ -247,7 +259,7 @@ async function loadClientDirectory(){
    return;
   }
   root.innerHTML=clients.map(c=>{
-   const assignmentOptions=activeStaff.map(s=>'<option value="'+esc(s.uid)+'" '+(c.assignedCounsellorUid===s.uid?'selected':'')+'>'+esc(s.fullName||s.email)+' · '+esc(servicesLabel(s.services||[]))+'</option>').join("");
+   const assignmentOptions=activeStaff.filter(s=>(s.services||[]).includes(c.serviceType)).map(s=>'<option value="'+esc(s.uid)+'" '+(c.assignedCounsellorUid===s.uid?'selected':'')+'>'+esc(s.fullName||s.email)+' · '+esc(servicesLabel(s.services||[]))+'</option>').join("");
    const assigned=c.assignedCounsellorName?'<span class="pill active">'+esc(c.assignedCounsellorName)+'</span>':'<span class="pill inactive">Unassigned</span>';
    const assignmentControl=isAdmin?'<div class="client-assign-control"><label>Assign counsellor<select data-client-assign="'+esc(c.uid)+'"><option value="">Leave unassigned</option>'+assignmentOptions+'</select></label><button class="primary" type="button" data-client-save="'+esc(c.uid)+'">Save assignment</button></div>':'';
    const phone=c.phone?'<a href="tel:'+esc(c.phone)+'">'+esc(c.phone)+'</a>':'<span class="muted">Not provided</span>';
