@@ -9,7 +9,7 @@
 <title>My Quorista | Quorista Overseas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./styles.css?v=20261101-cycles1">
+<link rel="stylesheet" href="./styles.css?v=20261117-legal1">
 </head>
 <body>
 <header class="site-header"><div class="nav-wrap"><a class="brand" href="https://quoristaoverseas.in/" aria-label="Quorista Overseas home"><img src="https://quoristaoverseas.in/assets/quorista-logo.png" alt="Quorista Overseas"></a><nav><a href="https://quoristaoverseas.in/#study">Study Abroad</a><a href="https://quoristaoverseas.in/#travel">Tourism</a><a class="nav-cta" href="https://quoristaoverseas.in/">← Back to Home</a></nav></div></header>
@@ -26,6 +26,7 @@
 <div id="service-field" class="hidden"><label id="service-label">Which service are you interested in?</label><div class="service-options" role="radiogroup" aria-labelledby="service-label"><label class="service-option"><input type="radio" name="service-choice" value="study_abroad"><span class="service-option-icon" aria-hidden="true">✈</span><span class="service-option-copy"><strong>Study Abroad</strong><small>Explore universities, courses and opportunities overseas.</small></span><span class="service-option-check" aria-hidden="true">✓</span></label><label class="service-option"><input type="radio" name="service-choice" value="tourism"><span class="service-option-icon tourism-icon" aria-hidden="true">⌖</span><span class="service-option-copy"><strong>International Tourism</strong><small>Plan international holidays and travel experiences.</small></span><span class="service-option-check" aria-hidden="true">✓</span></label></div><select id="service-type" hidden aria-hidden="true" tabindex="-1"><option value="">Select one service</option><option value="study_abroad">Study Abroad</option><option value="tourism">International Tourism</option></select><small class="muted service-hint">Choose one service. Your case will be created automatically after registration.</small></div>
 <label for="email">Email address</label><input id="email" type="email" autocomplete="username" required placeholder="you@example.com">
 <label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required minlength="6" placeholder="Enter your password">
+<div id="legal-acceptance" class="legal-acceptance hidden"><label class="legal-acceptance-label"><input id="legal-acceptance-checkbox" type="checkbox"><span>I agree to the <a href="https://quoristaoverseas.in/terms.html" target="_blank" rel="noopener">Terms &amp; Conditions</a> and consent to the use of my information as explained in the <a href="https://quoristaoverseas.in/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</span></label></div>
 <button type="submit" id="auth-submit">Sign in <span>→</span></button>
 <p class="message" id="auth-message" role="status" aria-live="polite"></p>
 </form>
@@ -80,10 +81,10 @@
 <section class="dashboard-page hidden" id="page-counsellor">
 <div id="counsellor-workspace"><div class="content-panel empty-panel"><div class="empty-illustration counsellor-illustration"><span>✧</span><i>✦</i></div><span class="section-kicker">PERSONAL GUIDANCE</span><h3>Your counsellor details will appear here</h3><p>Once a counsellor is assigned to one of your applications, their contact and assignment information will be displayed in this space.</p><div class="coming-soon-tag"><span></span> No counsellor assigned yet</div></div></div>
 </section>
-<footer class="dashboard-footer">© <span id="year"></span> Quorista Overseas <i>•</i> Study <i>•</i> Travel <i>•</i> Beyond Borders</footer>
+<footer class="dashboard-footer">© <span id="year"></span> Quorista Overseas <i>•</i> Study <i>•</i> Travel <i>•</i> Beyond Borders <span class="portal-legal-links"><a href="https://quoristaoverseas.in/legal.html">Legal &amp; Policies</a> · <a href="https://quoristaoverseas.in/terms.html">Terms</a> · <a href="https://quoristaoverseas.in/privacy.html">Privacy</a></span></footer>
 </div>
 </section>
-<footer class="auth-footer" id="auth-footer">© <span id="year-auth"></span> Quorista Overseas <i>•</i> Study <i>•</i> Travel <i>•</i> Beyond Borders</footer>
+<footer class="auth-footer" id="auth-footer">© <span id="year-auth"></span> Quorista Overseas <i>•</i> Study <i>•</i> Travel <i>•</i> Beyond Borders <span class="portal-legal-links"><a href="https://quoristaoverseas.in/legal.html">Legal &amp; Policies</a> · <a href="https://quoristaoverseas.in/terms.html">Terms</a> · <a href="https://quoristaoverseas.in/privacy.html">Privacy</a></span></footer>
 </section></div></main>
-<script type="module" src="./app.js?v=8"></script>
+<script type="module" src="./app.js?v=9"></script>
 </body></html>
