@@ -142,9 +142,30 @@ async function enterWorkspace(user){
  currentUser=user;isAdmin=user.uid===ADMIN_UID;if(isAdmin)await removeLegacyCounsellorEmails();
  const snap=await getDoc(doc(db,"staff",user.uid));
  staffProfile=snap.exists()?snap.data():null;
- if(isAdmin&&staffProfile&&staffProfile.fullName!=="Adarsh Srivastava"){
-  await updateDoc(doc(db,"staff",user.uid),{fullName:"Adarsh Srivastava",updatedAt:serverTimestamp()});
-  staffProfile={...staffProfile,fullName:"Adarsh Srivastava"};
+ if(isAdmin&&staffProfile){
+  const ownerProfileUpdates={};
+  if(staffProfile.fullName!=="Adarsh Srivastava")ownerProfileUpdates.fullName="Adarsh Srivastava";
+  if(staffProfile.designation!=="Founder & Immigration Consultant")ownerProfileUpdates.designation="Founder & Immigration Consultant";
+  if(Object.keys(ownerProfileUpdates).length){
+   ownerProfileUpdates.updatedAt=serverTimestamp();
+   await updateDoc(doc(db,"staff",user.uid),ownerProfileUpdates);
+   staffProfile={...staffProfile,...ownerProfileUpdates};
+  }
+  try{
+   const [assignedUsers,assignedApplications]=await Promise.all([
+    getDocs(query(collection(db,"users"),where("assignedCounsellorUid","==",user.uid))),
+    getDocs(query(collection(db,"applications"),where("assignedCounsellorUid","==",user.uid)))
+   ]);
+   const staleAssignments=[...assignedUsers.docs,...assignedApplications.docs].filter(item=>item.data().assignedCounsellorDesignation!=="Founder & Immigration Consultant");
+   for(let start=0;start<staleAssignments.length;start+=450){
+    const batch=writeBatch(db);
+    staleAssignments.slice(start,start+450).forEach(item=>batch.update(item.ref,{assignedCounsellorDesignation:"Founder & Immigration Consultant",updatedAt:serverTimestamp()}));
+    await batch.commit();
+   }
+  }catch(migrationError){
+   console.warn("Owner designation was updated, but existing assignment labels could not all be synchronized.",migrationError);
+  }
+  staffProfile={...staffProfile,fullName:"Adarsh Srivastava",designation:"Founder & Immigration Consultant"};
  }
  if(!isAdmin&&(!staffProfile||staffProfile.active!==true)){await signOut(auth);throw new Error("This account has not been authorised for staff access. Contact your Quorista administrator.");}
  $("login-panel").classList.add("hidden");$("workspace").classList.remove("hidden");
@@ -545,7 +566,7 @@ async function loadFollowUps(){
 
 $("login-form").addEventListener("submit",async e=>{e.preventDefault();$("login-button").disabled=true;message("login-message","");try{const c=await signInWithEmailAndPassword(auth,$("email").value.trim(),$("password").value);await enterWorkspace(c.user);}catch(err){message("login-message",err.message||"Sign-in failed.");if(auth.currentUser)await signOut(auth).catch(()=>{});}finally{$("login-button").disabled=false;}});
 $("staff-form").addEventListener("submit",async e=>{e.preventDefault();const services=[...document.querySelectorAll('input[name="service"]:checked')].map(x=>x.value);if(!services.length){message("staff-message","Select at least one permitted service.");return;}const uid=$("staff-uid").value.trim();if(!uid||uid===ADMIN_UID){message("staff-message","Enter the counsellor's own Firebase Authentication UID. Your administrator account is already reserved.");return;}try{const existing=await getDoc(doc(db,"staff",uid));if(existing.exists()){message("staff-message","A profile already exists for this UID. Edit it in the Authorised staff list instead; existing access was not changed.");return;}await setDoc(doc(db,"staff",uid),{fullName:$("staff-name").value.trim(),email:$("staff-email").value.trim(),designation:$("staff-title").value.trim(),role:"counsellor",services,active:true,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});message("staff-message","Counsellor profile created successfully.",true);e.target.reset();$("staff-title").value="Study Abroad Counsellor";await loadStaff();}catch(err){message("staff-message","Could not save: "+err.message);}});
-$("activate-owner").addEventListener("click",async()=>{try{await setDoc(doc(db,"staff",currentUser.uid),{fullName:"Adarsh Srivastava",email:currentUser.email||"",designation:"Co-Founder & Immigration Consultant",role:"super_admin",services:["study_abroad"],active:true,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});await enterWorkspace(currentUser);}catch(e){message("owner-message",e.message);}});
+$("activate-owner").addEventListener("click",async()=>{try{await setDoc(doc(db,"staff",currentUser.uid),{fullName:"Adarsh Srivastava",email:currentUser.email||"",designation:"Founder & Immigration Consultant",role:"super_admin",services:["study_abroad"],active:true,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});await enterWorkspace(currentUser);}catch(e){message("owner-message",e.message);}});
 $("refresh").addEventListener("click",loadCases);
 $("refresh-clients")?.addEventListener("click",loadClientDirectory);
 $("refresh-followups")?.addEventListener("click",loadFollowUps);
