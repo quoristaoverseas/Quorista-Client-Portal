@@ -283,6 +283,8 @@ input, select, textarea { min-width:0; }
 
 /* Legal acceptance at client registration */
 .auth-card .legal-acceptance{margin-top:8px;padding:13px 14px;border:1px solid #e6e1f1;border-radius:12px;background:#faf9fe}
+.auth-card .privacy-summary{margin:0 0 10px;color:#5d5a7e;font-size:.74rem;line-height:1.55}
+.auth-card .privacy-summary a{color:#4b35c7;text-decoration:underline;text-underline-offset:2px;font-weight:700}
 .auth-card .legal-acceptance-label{display:flex;align-items:flex-start;gap:10px;margin:0;color:#5d5a7e;font-size:.75rem;font-weight:500;line-height:1.55}
 .auth-card .legal-acceptance-label input[type=checkbox]{flex:0 0 17px;width:17px;height:17px;margin:2px 0 0;accent-color:#5b3df5}
 .auth-card .legal-acceptance-label a{color:#4b35c7;text-decoration:underline;text-underline-offset:2px;font-weight:700}
@@ -290,5 +292,3 @@ input, select, textarea { min-width:0; }
 .portal-legal-links a{color:#c9bfff;text-decoration:underline;text-underline-offset:2px;margin:0 3px}
 
 
-/* Google sign-in control */
-.auth-card .google-signin-button{width:100%;min-height:48px;margin-top:10px;border:1px solid #dcd8e8;border-radius:999px;background:#fff;color:#211b46;font:700 .9rem 'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:11px;cursor:pointer}.auth-card .google-signin-button span{font:800 1.05rem Arial,sans-serif;color:#4285f4}.auth-card .google-signin-button:disabled{opacity:.6;cursor:wait}
