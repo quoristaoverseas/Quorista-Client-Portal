@@ -320,3 +320,139 @@ input, select, textarea { min-width:0; }
   opacity:.6;
   cursor:wait;
 }
+
+
+/* =========================================================
+   QUORISTA UI REFRESH — visual layer only
+   Keeps existing markup, IDs, data attributes and behaviours.
+   ========================================================= */
+:root{
+  --ink:#142c4e;--indigo:#183b63;--violet:#315f91;--lilac:#dce8f4;
+  --saffron:#d9a441;--coral:#c77d68;--cream:#f7f9fc;--mist:#edf3f9;
+  --text:#23364d;--muted:#718096;--line:rgba(20,44,78,.12);
+  --grad:linear-gradient(120deg,#183b63 0%,#315f91 100%);
+  color:var(--text);font-family:'DM Sans',system-ui,sans-serif;
+}
+body{background:#f4f7fb;color:var(--text)}
+.site-header{background:rgba(15,35,60,.88);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,.12)}
+.brand img{filter:none!important;max-width:230px}
+.hero{background:linear-gradient(135deg,#102844 0%,#183b63 58%,#28527d 100%)}
+.hero-grid{opacity:.38;background-size:72px 72px}
+.hero-orb{opacity:.2;filter:blur(95px)}
+.orb-a{background:#80a9d0}.orb-b{background:#d9a441}
+.route-map{opacity:.2}
+.route-map path{stroke:rgba(218,232,246,.48)}
+.route-dot{background:#d9a441;box-shadow:0 0 0 6px rgba(217,164,65,.13),0 0 18px rgba(217,164,65,.65)}
+.hero h1{letter-spacing:-.045em}
+.hero h1 em{background:none;color:#c8d9eb;-webkit-text-fill-color:#c8d9eb}
+.hero-lead{color:rgba(245,249,255,.78)}
+.hero-facts span{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.14)}
+.hero-facts b{color:#e4bd72}
+.nav-cta{color:#183b63!important;border-radius:9px;box-shadow:0 8px 22px rgba(0,0,0,.12)}
+.nav-cta:hover{background:#eaf1f8;color:#142c4e!important}
+.auth-card{border:1px solid #e4eaf1;border-radius:18px;box-shadow:0 24px 70px -36px rgba(5,24,48,.55)}
+.card-kicker,.eyebrow{color:#315f91}
+.auth-card h2{color:#142c4e}
+.auth-card input,.detail-section input,.detail-section select,.detail-section textarea{
+ border:1px solid #d8e1eb;background:#fbfcfe;border-radius:9px;transition:border-color .18s,box-shadow .18s,background .18s
+}
+.auth-card input:focus,.detail-section input:focus,.detail-section select:focus,.detail-section textarea:focus{
+ border-color:#4778a8;box-shadow:0 0 0 3px rgba(49,95,145,.13);background:#fff
+}
+.auth-card form button,.workspace-button{background:linear-gradient(120deg,#183b63,#315f91);border-radius:9px;box-shadow:0 9px 22px -13px rgba(24,59,99,.65);transition:transform .18s,box-shadow .18s,filter .18s}
+.auth-card form button:hover,.workspace-button:hover{transform:translateY(-1px);box-shadow:0 13px 25px -14px rgba(24,59,99,.7);filter:brightness(1.06)}
+.mode-line button,.forgot-password-link,.mini-action{color:#315f91}
+.dashboard{background:#f5f8fc;border-color:#e2e9f1;border-radius:18px;box-shadow:0 26px 70px -35px rgba(8,29,54,.48)}
+.dashboard-sidebar{border-right:1px solid #e5ebf2;background:#fff}
+.dashboard-brand-name,.dashboard-mobile-title{color:#183b63}
+.sidebar-caption,.dashboard-eyebrow,.section-kicker,.overview-label,.detail-item span{color:#8291a3}
+.dashboard-nav-item{border-radius:9px;color:#66788d}
+.dashboard-nav-item:hover{background:#f1f5fa;color:#244d77}
+.dashboard-nav-item.active{background:#eaf1f8;color:#244d77;box-shadow:inset 3px 0 0 #315f91}
+.sidebar-help{background:#f2f6fa}
+.help-icon{background:#e1ebf5;color:#315f91}
+.signout-button{border-color:#e5ebf2;border-radius:9px}
+.signout-button:hover{border-color:#b9cadd;color:#244d77;background:#f9fbfd}
+.dashboard-main{background:#f5f8fc}
+.dashboard-heading h2,.section-heading h3,.panel-heading h3,.overview-card strong{color:#142c4e}
+.secure-pill{border-color:#e2e9f1;color:#6c7d91}
+.welcome-banner{background:linear-gradient(115deg,#183b63 0%,#244d77 72%,#315f91 100%);border-radius:14px;box-shadow:0 14px 32px -25px rgba(20,44,78,.7)}
+.welcome-kicker{color:#c8d9eb}
+.overview-card,.content-panel,.dashboard-footnote{border-color:#e3eaf2;border-radius:12px;box-shadow:0 8px 24px -23px rgba(20,44,78,.45)}
+.overview-card{transition:transform .18s,border-color .18s,box-shadow .18s}
+.overview-card:hover{transform:translateY(-2px);border-color:#c2d3e4;box-shadow:0 14px 26px -21px rgba(20,44,78,.45)}
+.icon-profile{background:#eaf1f8;color:#315f91}
+.icon-applications{background:#f8f1e6;color:#a8792c}
+.icon-counsellor{background:#eaf4f1;color:#438575}
+.card-arrow{color:#315f91}
+.content-panel{background:#fff}
+.status-chip{background:#edf7f2;color:#287c61}
+.privacy-note{background:#f2f6fa;color:#66788d}
+.empty-illustration{background:#eaf1f8;color:#315f91}
+.coming-soon-tag{background:#f1f5fa;color:#66788d}
+.button-secondary{border-color:#dce5ee;color:#244d77;border-radius:9px;transition:background .18s,border-color .18s}
+.button-secondary:hover{background:#f2f6fa;border-color:#bdcddd}
+.workspace-case-panel,.workspace-detail-panel{border-color:#e3eaf2;border-radius:12px;box-shadow:0 8px 24px -23px rgba(20,44,78,.4)}
+.case-row{border-color:#e5ebf2;border-radius:9px;transition:background .16s,border-color .16s,transform .16s}
+.case-row:hover{background:#f7f9fc;border-color:#c7d6e5;transform:translateY(-1px)}
+.case-row.selected{border-color:#6f94b8;background:#edf3f9}
+.detail-status{background:#eaf1f8;color:#244d77}
+.client-contact-grid div{background:#f5f8fb}
+.detail-section{border-color:#e8edf3}
+.workspace-button.secondary{background:#edf3f9;color:#244d77;border-color:#d7e2ed}
+.record-list article{border-color:#e5ebf2;border-radius:9px}
+:where(a,button,input,select,textarea,summary):focus-visible{outline:3px solid rgba(49,95,145,.32);outline-offset:2px}
+button,a{-webkit-tap-highlight-color:transparent}
+@media(max-width:760px){
+ .dashboard{border-radius:14px}
+ .dashboard-main{background:#f5f8fc}
+ .welcome-banner{border-radius:12px}
+}
+@media(prefers-reduced-motion:reduce){
+ *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+
+
+/* Client application, questionnaire and progress surfaces */
+.service-option{border:1px solid #e1e8f0;border-radius:11px;background:#fbfcfe;transition:border-color .18s,background .18s,box-shadow .18s}
+.service-option:hover{border-color:#b9cadd;background:#fff}
+.service-option:has(input:checked){border-color:#6f94b8;background:#f0f5fa;box-shadow:0 0 0 2px rgba(49,95,145,.08)}
+.service-option-check{background:#315f91}
+.service-option-copy strong{color:#183b63}
+.service-option-copy small,.service-hint{color:#718096}
+.application-topline h3,.application-step-heading h4,.questionnaire-intro-card h3,.progress-page-intro h3,.client-progress-card-head h4{color:#142c4e}
+.application-private,.application-optional-tag,.questionnaire-optional-tag{background:#edf3f9;color:#315f91;border-radius:999px}
+.application-steps{gap:8px}
+.application-step{border:1px solid #e3eaf2;border-radius:10px;background:#fff;transition:border-color .18s,background .18s}
+.application-step.active{border-color:#6f94b8;background:#f0f5fa}
+.application-step.completed .step-number{background:#315f91}
+.application-progress{background:#e6edf4;border-radius:999px;overflow:hidden}
+.application-progress span{background:linear-gradient(90deg,#315f91,#6f94b8);border-radius:999px}
+.application-form-panel,.application-drafts,.client-progress-card,.questionnaire-intro-card,.questionnaire-privacy-note{border-color:#e3eaf2;border-radius:12px;box-shadow:0 8px 24px -23px rgba(20,44,78,.35)}
+.application-field input,.application-field select,.application-field textarea{border:1px solid #d8e1eb;border-radius:9px;background:#fbfcfe;transition:border-color .18s,box-shadow .18s,background .18s}
+.application-field input:focus,.application-field select:focus,.application-field textarea:focus{border-color:#4778a8;box-shadow:0 0 0 3px rgba(49,95,145,.13);background:#fff}
+.application-primary,.application-actions button,.application-success-card button{background:linear-gradient(120deg,#183b63,#315f91);border-radius:9px;transition:transform .18s,box-shadow .18s}
+.application-primary:hover,.application-actions button:hover,.application-success-card button:hover{transform:translateY(-1px);box-shadow:0 10px 22px -14px rgba(24,59,99,.65)}
+.application-list-item,.client-progress-entry,.timeline-entry-card{border-color:#e3eaf2;border-radius:10px}
+.application-submitted-label{color:#287c61}
+.progress-status-pill{background:#edf3f9;color:#315f91;border-radius:999px}
+.progress-timeline-entry:before{background:#d6e1ec}
+.timeline-marker{background:#315f91;border:3px solid #e7eff7;box-shadow:0 0 0 1px #8ca9c5}
+.timeline-entry-card{background:#fff}
+.latest-progress-update{background:#f3f7fb;border:1px solid #e3eaf2;border-radius:10px}
+.counsellor-profile-card{border:1px solid #e3eaf2;border-radius:12px;transition:border-color .18s,box-shadow .18s}
+.counsellor-profile-card:hover{border-color:#c2d3e4;box-shadow:0 12px 25px -22px rgba(20,44,78,.45)}
+.questionnaire-privacy-note{background:#f3f7fb}
+.application-message{color:#287c61}
+.application-message.error{color:#b3321f}
+@media(max-width:760px){
+ .application-layout{grid-template-columns:minmax(0,1fr)}
+ .application-steps{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .application-actions{gap:9px}
+}
+@media(max-width:600px){
+ .application-step{min-width:0}
+ .application-step small{overflow-wrap:anywhere}
+ .client-progress-card,.application-form-panel,.application-drafts{padding:17px}
+ .progress-summary-grid,.university-update-grid{grid-template-columns:1fr}
+}
