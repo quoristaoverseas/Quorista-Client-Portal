@@ -292,3 +292,31 @@ input, select, textarea { min-width:0; }
 .portal-legal-links a{color:#c9bfff;text-decoration:underline;text-underline-offset:2px;margin:0 3px}
 
 
+
+
+/* Client login — password recovery link */
+.auth-card form .forgot-password-link{
+  justify-self:end;
+  width:auto;
+  height:auto;
+  min-height:0;
+  margin:0 0 2px;
+  padding:2px 0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  color:#5b3df5;
+  box-shadow:none;
+  font:700 .76rem 'DM Sans',sans-serif;
+  cursor:pointer;
+  text-align:right;
+}
+.auth-card form .forgot-password-link:hover{
+  color:#10065c;
+  text-decoration:underline;
+  text-underline-offset:3px;
+}
+.auth-card form .forgot-password-link:disabled{
+  opacity:.6;
+  cursor:wait;
+}
