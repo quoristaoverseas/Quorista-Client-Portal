@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
 import {
   getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  onAuthStateChanged, signOut, updateProfile
+  sendPasswordResetEmail, onAuthStateChanged, signOut, updateProfile
 } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, serverTimestamp, collection, query, where, getDocs, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
@@ -42,6 +42,7 @@ function setMode(nextMode) {
   $("service-type").value = "";
   $("phone").required = signup;
   $("legal-acceptance").classList.toggle("hidden", !signup);
+  $("forgot-password").classList.toggle("hidden", signup);
   $("legal-acceptance-checkbox").required = signup;
   $("legal-acceptance-checkbox").checked = false;
   $("full-name").value = "";
@@ -557,6 +558,51 @@ async function loadExistingClient(user) {
   }
   showDashboard(user, profile);
 }
+
+
+$("forgot-password").addEventListener("click", async () => {
+  if (authActionInProgress) return;
+
+  const email = $("email").value.trim();
+  if (!email) {
+    setMessage("Enter your email address above, then select Forgot password.");
+    $("email").focus();
+    return;
+  }
+  if (!$("email").checkValidity()) {
+    setMessage("Please enter a valid email address.");
+    $("email").focus();
+    return;
+  }
+
+  const button = $("forgot-password");
+  authActionInProgress = true;
+  button.disabled = true;
+  setMessage("");
+
+  try {
+    await sendPasswordResetEmail(auth, email);
+    setMessage(
+      "If an account exists for this email address, a password-reset link will be sent shortly. Please check your inbox and spam folder.",
+      false
+    );
+  } catch (error) {
+    console.error("Password reset request failed:", error);
+    if (error.code === "auth/user-not-found") {
+      setMessage(
+        "If an account exists for this email address, a password-reset link will be sent shortly. Please check your inbox and spam folder.",
+        false
+      );
+    } else if (error.code === "auth/too-many-requests") {
+      setMessage("Too many attempts. Please wait a while before requesting another reset email.");
+    } else {
+      setMessage("We couldn't send a password-reset email right now. Please try again later or contact Quorista support.");
+    }
+  } finally {
+    authActionInProgress = false;
+    button.disabled = false;
+  }
+});
 
 $("mode-toggle").addEventListener("click", () => setMode(mode === "login" ? "signup" : "login"));
 const requestedMode = new URLSearchParams(window.location.search).get("mode");
